@@ -1,0 +1,28 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Run RuneLite",
+            "request": "launch",
+            "mainClass": "com.example.ExamplePluginTest", // Your main class
+            "vmArgs": "-ea",
+            "args": ["--insecure-write-credentials"],
+            "projectName": "osrs-skilling-planner-iron", // Replace with your project name
+            "preLaunchTask": "Build RuneLite Plugin" // Reference the build task
+        },
+        {
+            "type": "java",
+            "name": "Fast RuneLite",
+            "request": "launch",
+            "mainClass": "com.example.ExamplePluginTest", // Your main class
+            "vmArgs": "-ea",
+            "args": ["--insecure-write-credentials"],
+            "projectName": "osrs-skilling-planner-iron", // Replace with your project name
+            "preLaunchTask": "Build RuneLite Plugin Fast" // Reference the build task
+        }
+    ]
+}

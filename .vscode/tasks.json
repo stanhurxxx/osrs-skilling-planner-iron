@@ -1,0 +1,46 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+            "label": "Build RuneLite Plugin",
+            "type": "shell",
+            "command": "./gradlew",
+            "args": [
+                "clean",
+                "build",
+                "shadowJar",
+                "--refresh-dependencies"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [
+                "$javac"
+            ],
+            "presentation": {
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "Build RuneLite Plugin Fast",
+            "type": "shell",
+            "command": "./gradlew",
+            "args": [
+                "clean",
+                "build",
+                "shadowJar"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [
+                "$javac"
+            ],
+            "presentation": {
+                "reveal": "always"
+            }
+        }
+	]
+}
