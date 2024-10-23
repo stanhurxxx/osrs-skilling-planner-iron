@@ -63,7 +63,6 @@ public class SkillingPlannerPanel extends PluginPanel {
         this.clientThread = clientThread;
         cache = new Cache(this);
         router = new Router(this);
-
         try {
             cache.load();
             router.navigate(cache.getData().view);
@@ -99,9 +98,6 @@ public class SkillingPlannerPanel extends PluginPanel {
             public void actionPerformed(ActionEvent e) {
                 // Get the selected item
                 String selectedOption = (String) cb.getSelectedItem();
-
-                // Perform an action based on the selected item
-                System.out.println("Selected option: " + selectedOption);
                 
                 // You can add logic here to respond to the selected option
                 if (selectedOption.equals("Overview")) {
@@ -109,8 +105,6 @@ public class SkillingPlannerPanel extends PluginPanel {
                     router.navigate(ViewNames.Overview);
                 } else if (selectedOption.equals("Slayer")) {
                     router.navigate(ViewNames.Slayer);
-                    // Perform some action for "Skills"
-                    System.out.println("Skills selected.");
                 }
                 panel.repaint();
                 panel.revalidate();

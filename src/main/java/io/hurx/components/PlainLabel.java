@@ -21,6 +21,6 @@ public class PlainLabel extends JLabel {
     public PlainLabel(String text) {
         super(text);
         this.setBorder(BorderFactory.createEmptyBorder(Theme.TABLE_V_PADDING, Theme.TABLE_H_PADDING, Theme.TABLE_V_PADDING, 0));
-        this.setFont(new Font("Arial", Font.PLAIN, Theme.LABEL_SIZE));
+        this.setFont(new Font("Arial", Font.BOLD, Theme.LABEL_SIZE));
     }
 }

@@ -8,9 +8,9 @@
             "type": "java",
             "name": "Run RuneLite",
             "request": "launch",
-            "mainClass": "com.example.ExamplePluginTest", // Your main class
-            "vmArgs": "-ea",
-            "args": ["--insecure-write-credentials"],
+            "mainClass": "io.hurx.SkillingPlannerPluginTest", // Your main class
+            "vmArgs": ["-ea"], // Remove -jar from here
+            "args": ["--insecure-write-credentials"], // Your main arguments here
             "projectName": "osrs-skilling-planner-iron", // Replace with your project name
             "preLaunchTask": "Build RuneLite Plugin" // Reference the build task
         },
@@ -18,9 +18,9 @@
             "type": "java",
             "name": "Fast RuneLite",
             "request": "launch",
-            "mainClass": "com.example.ExamplePluginTest", // Your main class
-            "vmArgs": "-ea",
-            "args": ["--insecure-write-credentials"],
+            "mainClass": "io.hurx.SkillingPlannerPluginTest", // Your main class
+            "vmArgs": ["-ea"], // Remove -jar from here
+            "args": ["--insecure-write-credentials"], // Your main arguments here
             "projectName": "osrs-skilling-planner-iron", // Replace with your project name
             "preLaunchTask": "Build RuneLite Plugin Fast" // Reference the build task
         }

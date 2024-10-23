@@ -47,8 +47,8 @@ public class Table extends JTable {
                 int row = table.rowAtPoint(point);
                 if (row != hoveredRow) {
                     hoveredRow = row;
-                    panel.revalidate();
-                    panel.repaint();
+                    table.revalidate();
+                    table.repaint();
                 }
             }
         });
@@ -57,8 +57,8 @@ public class Table extends JTable {
             public void mouseExited(MouseEvent e)
             {
                 hoveredRow = -1;
-                panel.revalidate();
-                panel.repaint();
+                table.revalidate();
+                table.repaint();
             }
         });
         super.setRowHeight(Theme.TABLE_V_PADDING * 2 + 16);

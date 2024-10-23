@@ -47,8 +47,9 @@ public class Cache {
      * @return null if offline
      */
     public String getFileName() {
-        long accountHash = panel.client.getAccountHash();
-        return accountHash == -1 ? null : Long.toString(accountHash);
+        return Long.toString(7998418451506878129L);
+        // long accountHash = panel.client.getAccountHash();
+        // return accountHash == -1 ? null : Long.toString(accountHash);
     }
 
     /**

@@ -1,11 +1,11 @@
-package com.example;
+package io.hurx;
 
 import io.hurx.SkillingPlannerPlugin;
 
 import net.runelite.client.RuneLite;
 import net.runelite.client.externalplugins.ExternalPluginManager;
 
-public class ExamplePluginTest
+public class SkillingPlannerPluginTest
 {
 	public static void main(String[] args) throws Exception
 	{

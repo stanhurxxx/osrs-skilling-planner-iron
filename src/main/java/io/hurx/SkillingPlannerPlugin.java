@@ -1,6 +1,5 @@
 package io.hurx;
 
-import io.hurx.cache.Cache;
 import io.hurx.cache.exceptions.CacheCorruptedException;
 import io.hurx.cache.exceptions.PlayerNotFoundException;
 import io.hurx.models.ViewNames;
@@ -9,7 +8,6 @@ import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
-import net.runelite.api.Player;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.client.RuneLite;
 import net.runelite.client.eventbus.Subscribe;
@@ -17,6 +15,7 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
+
 import javax.imageio.ImageIO;
 import java.io.File;
 import java.io.IOException;
@@ -63,6 +62,9 @@ public class SkillingPlannerPlugin extends Plugin
 			.build();
 			
 		clientToolbar.addNavigation(button);
+		clientToolbar.openPanel(button);
+
+		loadCache();
 	}
 
 	@Override
@@ -78,10 +80,10 @@ public class SkillingPlannerPlugin extends Plugin
 			loadCache();
     	}
 		else if (gameStateChanged.getGameState() == GameState.LOGIN_SCREEN) {
-			panel.getRouter().navigate(ViewNames.LoggedOut);
+			loadCache();
 		}
 		else if (gameStateChanged.getGameState() == GameState.CONNECTION_LOST) {
-			panel.getRouter().navigate(ViewNames.LoggedOut);
+			loadCache();
 		}
 	}
 
