@@ -1,17 +1,13 @@
 package io.hurx.views.slayer.components;
 
 import java.awt.Component;
-import java.awt.Dimension;
+import java.awt.Point;
 
 import javax.swing.BorderFactory;
-import javax.swing.JPanel;
 import javax.swing.ImageIcon;
-import javax.swing.KeyStroke;
-import javax.swing.AbstractAction;
 import javax.swing.JLabel;
 import javax.swing.JTable;
 import io.hurx.components.AbbreviatedNumberFormattedTextField;
-import javax.swing.DefaultCellEditor;
 import java.awt.Color;
 import javax.swing.SwingConstants;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -20,10 +16,9 @@ import javax.swing.table.DefaultTableModel;
 import io.hurx.Resources;
 import io.hurx.SkillingPlannerPanel;
 import io.hurx.Theme;
-import io.hurx.components.JNumberSlider;
-import io.hurx.components.JNumberSliderCellEditor;
 import io.hurx.components.AbbreviatedNumberFormattedTextFieldCellEditor;
 import io.hurx.models.CombatStyle;
+import io.hurx.models.items.Items;
 import io.hurx.models.slayer.masters.Duradel;
 import io.hurx.models.slayer.masters.Nieve;
 import io.hurx.models.slayer.masters.SlayerMaster;
@@ -31,12 +26,15 @@ import io.hurx.models.slayer.masters.SlayerMasters;
 import io.hurx.models.slayer.monsters.SlayerMonster;
 import io.hurx.models.slayer.monsters.SlayerMonsters;
 import io.hurx.views.slayer.SlayerView;
-import javax.swing.border.LineBorder;
+import java.awt.event.MouseEvent;
 
 public class SlayerVariantCombatStyleTable extends JTable {
     public final static int ICON_SIZE = 24;
     public final static int H_PADDING = 5;
     public final static int V_PADDING = 5;
+
+    public int hoveredColumnIndex = -1;
+    public int hoveredRowIndex = -1;
 
     /**
      * Get the panel
@@ -77,6 +75,42 @@ public class SlayerVariantCombatStyleTable extends JTable {
         super.getColumnModel().getColumn(0).setMinWidth(ICON_SIZE + H_PADDING * 2);
         super.getColumnModel().getColumn(0).setMaxWidth(ICON_SIZE + H_PADDING * 2);
         super.getColumnModel().getColumn(1).setCellEditor(new AbbreviatedNumberFormattedTextFieldCellEditor());
+        super.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e)
+            {
+                if (hoveredColumnIndex == 0) {
+                    // TODO
+                }
+                table.clearSelection();
+                table.revalidate();
+                table.repaint();
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                hoveredColumnIndex = -1;
+                hoveredRowIndex = -1;
+                table.clearSelection();
+                table.revalidate();
+                table.repaint();   
+            }
+        });
+        addMouseMotionListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e)
+            {
+                Point point = e.getPoint();
+                int row = table.rowAtPoint(point);
+                int col = table.columnAtPoint(point);
+                if (col != hoveredColumnIndex || row != hoveredRowIndex) {
+                    hoveredColumnIndex = col;
+                    hoveredRowIndex = row;
+                }
+                table.clearSelection();
+                table.revalidate();
+                table.repaint();
+            }
+        });
         fillTableModel();
     }
 
@@ -101,23 +135,28 @@ public class SlayerVariantCombatStyleTable extends JTable {
             }
         }
         if (assignment != null) {
-            // TODO:
+            CombatStyle meleeStyle = panel.getCache().getData().slayerMonsterCombatStyleMelee.get(panel.getCache().getData().slayerSelectedVariant);
+            int meleeXpPerHour = panel.getCache().getData().slayerMonsterCombatStyleMeleeHourlyRate.get(panel.getCache().getData().slayerSelectedVariant);
+            CombatStyle rangedStyle = panel.getCache().getData().slayerMonsterCombatStyleRanged.get(panel.getCache().getData().slayerSelectedVariant);
+            int rangedXpPerHour = panel.getCache().getData().slayerMonsterCombatStyleRangedHourlyRate.get(panel.getCache().getData().slayerSelectedVariant);
+            CombatStyle magicStyle = panel.getCache().getData().slayerMonsterCombatStyleMagic.get(panel.getCache().getData().slayerSelectedVariant);
+            int magicXpPerHour = panel.getCache().getData().slayerMonsterCombatStyleMagicHourlyRate.get(panel.getCache().getData().slayerSelectedVariant);
             AbbreviatedNumberFormattedTextField textFieldMelee = new AbbreviatedNumberFormattedTextField();
-            textFieldMelee.setValue((Integer)100_000);
+            textFieldMelee.setValue((Integer)meleeXpPerHour);
             AbbreviatedNumberFormattedTextField textFieldRanged = new AbbreviatedNumberFormattedTextField();
-            textFieldRanged.setValue((Integer)100_000);
+            textFieldRanged.setValue((Integer)rangedXpPerHour);
             AbbreviatedNumberFormattedTextField textFieldMagic = new AbbreviatedNumberFormattedTextField();
-            textFieldMagic.setValue((Integer)100_000);
+            textFieldMagic.setValue((Integer)magicXpPerHour);
             model.addRow(new Object[] {
-                Resources.loadImageIcon(CombatStyle.Controlled.getIconPath(), ICON_SIZE, ICON_SIZE),
+                Resources.loadImageIcon(meleeStyle.getIconPath(), ICON_SIZE, ICON_SIZE),
                 textFieldMelee
             });
             model.addRow(new Object[] {
-                Resources.loadImageIcon(CombatStyle.Ranged.getIconPath(), ICON_SIZE, ICON_SIZE),
+                Resources.loadImageIcon(rangedStyle.getIconPath(), ICON_SIZE, ICON_SIZE),
                 textFieldRanged
             });
             model.addRow(new Object[] {
-                Resources.loadImageIcon(CombatStyle.Magic.getIconPath(), ICON_SIZE, ICON_SIZE),
+                Resources.loadImageIcon(magicStyle.getIconPath(), ICON_SIZE, ICON_SIZE),
                 textFieldMagic
             });
         }

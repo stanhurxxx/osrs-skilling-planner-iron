@@ -8,6 +8,7 @@ import io.hurx.components.Table;
 import io.hurx.components.TitleLabel;
 import io.hurx.models.View;
 import io.hurx.models.ViewNames;
+import io.hurx.models.items.Items;
 import io.hurx.models.slayer.masters.Duradel;
 import io.hurx.models.slayer.masters.Nieve;
 import io.hurx.models.slayer.masters.SlayerMasters;
@@ -54,10 +55,10 @@ public class SlayerView extends View {
     private SlayerTasksTable tasksTable;
 
     private SlayerVariantTable variantTable;
-    private PlainLabel variantCombatStyle = new PlainLabel("Combat style");
+    private PlainLabel variantXpDistribution = new PlainLabel("Xp per hour");
     private SlayerVariantCombatStyleTable variantCombatStyleTable;
     
-    private TitleLabel xpDistribution = new TitleLabel("XP distribution");
+    private TitleLabel xpDistribution = new TitleLabel("XP at 200M slay");
 
     private TitleLabel loot = new TitleLabel("Loot"); 
 
@@ -70,6 +71,7 @@ public class SlayerView extends View {
         panel.setOpaque(true);
         panel.setBackground(Theme.BG_COLOR);
         panel.setDoubleBuffered(true);
+        System.out.println(Items.AvantoeSeed.getName());
     }
 
     @Override
@@ -125,7 +127,7 @@ public class SlayerView extends View {
                     panel.remove(i);
                 }
                 panel.add(variantTable, 4);
-                panel.add(variantCombatStyle);
+                panel.add(variantXpDistribution);
                 panel.add(variantCombatStyleTable);
                 variantTable.fillTableModel();
                 variantCombatStyleTable.fillTableModel();

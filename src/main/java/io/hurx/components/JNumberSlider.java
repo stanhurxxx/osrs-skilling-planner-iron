@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class JNumberSlider extends JComponent {
-    public final static int H_PADDING = 5;
+    public final static int H_PADDING = 10;
     public final static int SIZE = 20; // Width of the slider handle
     private int minValue = 1;
     private int maxValue = 150;
@@ -125,7 +125,7 @@ public class JNumberSlider extends JComponent {
     }
 
     private int getHandlePosition(int value) {
-        return (int) ((double) (value - minValue) / (maxValue - minValue) * (getWidth() - getHandleWidth() - 2 * H_PADDING));
+        return (int) ((double) (value - minValue) / (maxValue - minValue) * (getWidth() - getHandleWidth() - H_PADDING * 2)) + H_PADDING;
     }
 
     private int valueForPosition(int x) {
@@ -148,7 +148,7 @@ public class JNumberSlider extends JComponent {
         super.paintComponent(g);
         // Draw the slider line
         g.setColor(Theme.TABLE_BG_COLOR_HOVER);
-        g.fillRect(0, (getHeight() - SIZE) / 2, getWidth() - H_PADDING - 5, SIZE);
+        g.fillRect(H_PADDING, (getHeight() - SIZE) / 2, getWidth() - H_PADDING * 2, SIZE);
         
         // Draw the handle
         g.setColor(Theme.TABLE_BG_COLOR);

@@ -86,28 +86,11 @@ public class CacheData {
                         }
                         // TODO: Dummy data
                         slayerMonsterCombatStyleMelee.put(a.variants[i], CombatStyle.Attack);
-                        slayerMonsterCombatStyleMeleeHourlyRate.put(a.variants[i], 100_000);
-                        slayerMonsterCombatStyleMelee.put(a.variants[i], CombatStyle.Ranged);
-                        slayerMonsterCombatStyleMeleeHourlyRate.put(a.variants[i], 0);
-                        slayerMonsterCombatStyleMelee.put(a.variants[i], CombatStyle.Magic);
-                        slayerMonsterCombatStyleMeleeHourlyRate.put(a.variants[i], 0);
-                    }
-                    if (a.name == monster) {
-                        // TODO: Dummy data
-                        if (a.minAmountExtended != null && a.maxAmountExtended != null) {
-                            slayerMonsterExtended.put(monster, true);
-                        }
-                        else {
-                            slayerMonsterExtended.put(monster, false);
-                        }
-                        // TODO: Dummy data
-                        slayerMonsterCombatStyleMelee.put(monster, CombatStyle.Attack);
-                        slayerMonsterCombatStyleMeleeHourlyRate.put(monster, 100_000);
-                        slayerMonsterCombatStyleMelee.put(monster, CombatStyle.Ranged);
-                        slayerMonsterCombatStyleMeleeHourlyRate.put(monster, 0);
-                        slayerMonsterCombatStyleMelee.put(monster, CombatStyle.Magic);
-                        slayerMonsterCombatStyleMeleeHourlyRate.put(monster, 0);
-                        break;
+                        slayerMonsterCombatStyleMeleeHourlyRate.put(a.variants[i], 110_000);
+                        slayerMonsterCombatStyleRanged.put(a.variants[i], CombatStyle.Ranged);
+                        slayerMonsterCombatStyleRangedHourlyRate.put(a.variants[i], 0);
+                        slayerMonsterCombatStyleMagic.put(a.variants[i], CombatStyle.Magic);
+                        slayerMonsterCombatStyleMagicHourlyRate.put(a.variants[i], 0);
                     }
                 }
             }

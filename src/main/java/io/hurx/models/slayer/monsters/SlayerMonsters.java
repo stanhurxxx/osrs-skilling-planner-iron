@@ -48,8 +48,7 @@ public enum SlayerMonsters {
     Vampyre("Vampyres", "icons/monsters/vampyre.png"),
     WarpedCreature("Warped Creatures", "icons/monsters/warped-creature.png"),
     Waterfiend("Waterfiends", "icons/monsters/waterfiend.png"),
-    Wyrm("Wyrms", "icons/monsters/wyrm.png"),
-    DeviantSpectre("Deviant Spectres", "icons/monsters/deviant-spectre.png");
+    Wyrm("Wyrms", "icons/monsters/wyrm.png");
 
     public String getDisplayName() {
         return displayName;

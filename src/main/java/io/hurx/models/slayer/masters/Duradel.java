@@ -19,7 +19,7 @@ public class Duradel extends SlayerMaster {
             SlayerMonsterRequirements.PriestInPeril
         },
         new SlayerMonsters[] {
-            SlayerMonsters.DeviantSpectre
+            
         }
     );
     public static final SlayerMonster AbyssalDemon = new SlayerMonster(

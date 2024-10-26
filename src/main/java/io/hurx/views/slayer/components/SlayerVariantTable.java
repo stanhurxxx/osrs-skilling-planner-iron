@@ -104,6 +104,14 @@ public class SlayerVariantTable extends JTable {
                 table.revalidate();
                 table.repaint();
             }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                hoveredColumnIndex = -1;
+                hoveredRowIndex = -1;
+                table.clearSelection();
+                table.revalidate();
+                table.repaint();   
+            }
         });
         addMouseMotionListener(new java.awt.event.MouseAdapter() {
             @Override
@@ -178,6 +186,14 @@ public class SlayerVariantTable extends JTable {
             label.setHorizontalAlignment(SwingConstants.CENTER);
             label.setVerticalAlignment(SwingConstants.CENTER);
             
+            SlayerVariantTable variantTable = (SlayerVariantTable)table;
+            SlayerMonsters monster = variantTable.getCurrentSlayerMonster().variants[row];
+            if (variantTable.panel.getCache().getData().slayerSelectedVariant == monster) {
+                label.setBackground(Theme.TABLE_BG_COLOR_SELECTED);
+            }
+            else if (row == variantTable.hoveredRowIndex && column == 0 && column == variantTable.hoveredColumnIndex) {
+                label.setBackground(Theme.TABLE_BG_COLOR_HOVER);
+            }
             if (value instanceof ImageIcon) {
                 label.setIcon((ImageIcon) value);
                 label.setText(""); // Clear the text
