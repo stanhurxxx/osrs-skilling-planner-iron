@@ -1,18 +1,20 @@
 package io.hurx.models.slayer.masters;
 
-import io.hurx.models.slayer.monsters.SlayerMonster;
+import io.hurx.models.slayer.SlayerAssignment;
 
 /**
  * Represents a slayer master
  */
 public abstract class SlayerMaster {
-    public SlayerMonster[] getAssignments() {
+    public static int POINTS_PER_SKIP = 30;
+
+    public SlayerAssignment[] getAssignments() {
         return assignments;
     }
 
-    protected SlayerMonster[] assignments;
+    protected SlayerAssignment[] assignments;
 
-    public SlayerMaster(SlayerMonster[] assignments) {
+    public SlayerMaster(SlayerAssignment[] assignments) {
         this.assignments = assignments;
     }
 }

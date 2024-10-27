@@ -1,14 +1,8 @@
 package io.hurx.models.items;
 
-import net.runelite.client.game.ItemManager;
-import java.util.List;
-import java.util.ArrayList;
-
 import javax.swing.ImageIcon;
 
 public class Item {
-    public static ItemManager manager = null;
-
     public int getId() {
         return id;
     }
@@ -23,31 +17,49 @@ public class Item {
         return this.icon;
     }
 
-    public int getPrice() {
-        if (Item.manager == null) return 0;
-        if (priceItemId != null) {
-            int price = Item.manager.getItemPrice(priceItemId); 
-            for (int subtractId : priceItemComponentIds) {
-                price -= Item.manager.getItemPrice(subtractId);
-            }
-            return price;
-        }
-        return Item.manager.getItemPrice(id);
+    public void setName(String name) {
+        this.name = name;
     }
+
+    public String getName() {
+        return this.name;
+    } 
+
+    private String name = "To be loaded";
+
+    public void setPrice(int price) {
+        this.price = price;
+    }
+
+    public int getPrice() {
+        return this.price;
+    }
+
+    private int price = 0;
 
     private ImageIcon icon;
 
+    public Integer getPriceItemId() {
+        return this.priceItemId;
+    }
+
     private Integer priceItemId = null;
+
+    public int[] getPriceItemComponentIds() {
+        return priceItemComponentIds;
+    }
 
     private int[] priceItemComponentIds = new int[] {};
 
     public Integer getNotedId() {
-        if (Item.manager == null) return null;
-        int notedId = Item.manager.getItemComposition(id).getLinkedNoteId();
-        return notedId == id || notedId < 0
-            ? null
-            : notedId;
+        return this.notedId;
     }
+
+    public void setNotedId(Integer notedId) {
+        this.notedId = notedId;
+    }
+
+    private Integer notedId;
 
     public ItemType getType() {
         return type;

@@ -2,7 +2,7 @@ package io.hurx.models.slayer.monsters;
 
 import io.hurx.models.IconPaths;
 import io.hurx.models.items.Items;
-import io.hurx.models.slayer.LootItem;
+import io.hurx.models.items.LootItem;
 
 public enum Monsters {
     AberrantSpectresNieve("Aberrant Spectres (Nieve's Cave)", IconPaths.LocationNievesCave, MonsterStats.Builder
@@ -1641,7 +1641,7 @@ public enum Monsters {
         .hitpoints(65)
         .build()
     ),
-    AncientZygomites("Mutated Zygomites", IconPaths.MonsterAncientZygomite, MonsterStats.Builder
+    AncientZygomites("Ancient Zygomites", IconPaths.MonsterAncientZygomite, MonsterStats.Builder
         .hitpoints(150)
         .xpBoostPercentage(2.5f)
 
@@ -2015,7 +2015,7 @@ public enum Monsters {
 
         .build()
     ),
-    Trolls("Trolls", IconPaths.MonsterTrolls, MonsterStats.Builder
+    Trolls("Mountain trolls", IconPaths.MonsterTrolls, MonsterStats.Builder
         .hitpoints(90)
 
         .loot(LootItem.Builder.item(Items.GrimyHarralander, 1, 1).dropRate(78f).build())
@@ -2068,6 +2068,34 @@ public enum Monsters {
         .loot(LootItem.Builder.item(Items.DwarfWeedSeed, 1, 1).dropRate(6097.5f).build())
         .loot(LootItem.Builder.item(Items.TorstolSeed, 1, 1).dropRate(12194.9f).build())
 
+        .build()
+    ),
+    Turoths("Turoths", IconPaths.MonsterTuroths, MonsterStats.Builder
+        .hitpoints(new int[] { 76, 77, 79, 81 })
+
+        .loot(LootItem.Builder.item(Items.LeafBladedSword, 1, 1).dropRate(500f).build())
+        .loot(LootItem.Builder.item(Items.MysticRobeBottomLight, 1, 1).dropRate(512f).build())
+
+        .loot(LootItem.Builder.item(Items.GrimyHarralander, 1, 3).dropRate(37.8f).build())
+        .loot(LootItem.Builder.item(Items.GrimyRanarrWeed, 1, 3).dropRate(48f).build())
+        .loot(LootItem.Builder.item(Items.GrimyIritLeaf, 1, 3).dropRate(66.1f).build())
+        .loot(LootItem.Builder.item(Items.GrimyAvantoe, 1, 3).dropRate(88.1f).build())
+        .loot(LootItem.Builder.item(Items.GrimyKwuarm, 1, 3).dropRate(105.7f).build())
+        .loot(LootItem.Builder.item(Items.GrimyCadantine, 1, 3).dropRate(132.1f).build())
+        .loot(LootItem.Builder.item(Items.GrimyLantadyme, 1, 3).dropRate(176.2f).build())
+        .loot(LootItem.Builder.item(Items.GrimyDwarfWeed, 1, 3).dropRate(176.2f).build())
+
+        .loot(LootItem.Builder.item(Items.ToadflaxSeed, 1, 1).dropRate(35.7f).build())
+        .loot(LootItem.Builder.item(Items.IritSeed, 1, 1).dropRate(52.4f).build())
+        .loot(LootItem.Builder.item(Items.AvantoeSeed, 1, 1).dropRate(76.3f).build())
+        .loot(LootItem.Builder.item(Items.KwuarmSeed, 1, 1).dropRate(111.9f).build())
+        .loot(LootItem.Builder.item(Items.SnapdragonSeed, 1, 1).dropRate(167.8f).build())
+        .loot(LootItem.Builder.item(Items.CadantineSeed, 1, 1).dropRate(239.7f).build())
+        .loot(LootItem.Builder.item(Items.LantadymeSeed, 1, 1).dropRate(335.6f).build())
+        .loot(LootItem.Builder.item(Items.DwarfWeedSeed, 1, 1).dropRate(559.4f).build())
+        .loot(LootItem.Builder.item(Items.TorstolSeed, 1, 1).dropRate(839.1f).build())
+
+        .loot(LootItem.Builder.item(Items.ClueScrollHard, 1, 1).dropRate(128f).build()) // Not sold
 
         .build()
     ),

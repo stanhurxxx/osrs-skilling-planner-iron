@@ -5,10 +5,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 import io.hurx.models.ViewNames;
+import io.hurx.models.items.Items;
 import io.hurx.models.slayer.masters.SlayerMasters;
+import io.hurx.models.slayer.monsters.Monsters;
 import io.hurx.models.slayer.monsters.SlayerMonsters;
-import io.hurx.models.slayer.monsters.SlayerMonster;
 import io.hurx.models.CombatStyle;
+import io.hurx.models.Skills;
+import io.hurx.models.slayer.SlayerAssignment;
 import io.hurx.models.slayer.masters.*;
 
 /**
@@ -20,38 +23,25 @@ public class CacheData {
      */
     public ViewNames view = ViewNames.Overview;
 
-    /**
-     * The players slayer master choice
-     */
+    public Map<Skills, Float> xp;
+    public Map<Items, Float> bank;
+    public Map<Items, Float> inventory;
+
     public SlayerMasters slayerMaster = SlayerMasters.Duradel;
-
-    /**
-     * Slayer blocks
-     */
     public SlayerMonsters[] slayerBlocked = new SlayerMonsters[] {};
-
-    /**
-     * Slayer skips
-     */
     public SlayerMonsters[] slayerSkipped = new SlayerMonsters[] {};
-
-    /**
-     * The selected slayer monster
-     */
     public SlayerMonsters slayerSelectedMonster = null;
-
-    /**
-     * Slayer variants
-     */
-    public SlayerMonsters slayerSelectedVariant = null;
-    public Map<SlayerMonsters, Map<SlayerMonsters, Integer>> slayerMonsterVariation;
-    public Map<SlayerMonsters, Boolean> slayerMonsterExtended;
-    public Map<SlayerMonsters, CombatStyle> slayerMonsterCombatStyleMelee;
-    public Map<SlayerMonsters, Integer> slayerMonsterCombatStyleMeleeHourlyRate;
-    public Map<SlayerMonsters, CombatStyle> slayerMonsterCombatStyleRanged;
-    public Map<SlayerMonsters, Integer> slayerMonsterCombatStyleRangedHourlyRate;
-    public Map<SlayerMonsters, CombatStyle> slayerMonsterCombatStyleMagic;
-    public Map<SlayerMonsters, Integer> slayerMonsterCombatStyleMagicHourlyRate;
+    public Monsters slayerSelectedVariant = null;
+    public Map<SlayerMonsters, Map<Monsters, Integer>> slayerMonsterVariation;
+    public Map<SlayerMonsters, Monsters[]> slayerMonsterVariationOrder;
+    public Map<Monsters, Boolean> slayerMonsterExtended;
+    public Map<Monsters, CombatStyle> slayerMonsterCombatStyleMelee;
+    public Map<Monsters, Integer> slayerMonsterCombatStyleMeleeHourlyRate;
+    public Map<Monsters, CombatStyle> slayerMonsterCombatStyleRanged;
+    public Map<Monsters, Integer> slayerMonsterCombatStyleRangedHourlyRate;
+    public Map<Monsters, CombatStyle> slayerMonsterCombatStyleMagic;
+    public Map<Monsters, Integer> slayerMonsterCombatStyleMagicHourlyRate;
+    public Map<Monsters, Integer> slayerMonsterCompletionTime;
 
     public CacheData() {
         slayerMonsterVariation = new HashMap<>();
@@ -62,38 +52,54 @@ public class CacheData {
         slayerMonsterCombatStyleRangedHourlyRate = new HashMap<>();
         slayerMonsterCombatStyleMagic = new HashMap<>();
         slayerMonsterCombatStyleMagicHourlyRate = new HashMap<>();
+        slayerMonsterVariationOrder = new HashMap<>();
+        slayerMonsterCompletionTime = new HashMap<>();
 
-        Duradel duradel = new Duradel();
-        Nieve nieve = new Nieve();
-        
-        loop: for (SlayerMonsters monster : SlayerMonsters.values()) {
-            Map<SlayerMonsters, Integer> variation = new HashMap<>();
-            SlayerMonster m = null;
-            for (SlayerMaster master : new SlayerMaster[] { duradel, nieve }) {
-                for (int i = 0; i < master.getAssignments().length; i ++) {
-                    SlayerMonster a = master.getAssignments()[i];
-                    // TODO: Dummy data
-                    variation.put(a.variants[0], a.maxAmountExtended == null ? a.maxAmount : a.maxAmountExtended);
-                    for (int j = 1; j < a.variants.length; j ++) {
-                        // TODO: Dummy data
-                        variation.put(a.variants[i], 0);
-                        // TODO: Dummy data
-                        if (a.minAmountExtended != null && a.maxAmountExtended != null) {
-                            slayerMonsterExtended.put(a.variants[i], true);
-                        }
-                        else {
-                            slayerMonsterExtended.put(a.variants[i], false);
-                        }
-                        // TODO: Dummy data
-                        slayerMonsterCombatStyleMelee.put(a.variants[i], CombatStyle.Attack);
-                        slayerMonsterCombatStyleMeleeHourlyRate.put(a.variants[i], 110_000);
-                        slayerMonsterCombatStyleRanged.put(a.variants[i], CombatStyle.Ranged);
-                        slayerMonsterCombatStyleRangedHourlyRate.put(a.variants[i], 0);
-                        slayerMonsterCombatStyleMagic.put(a.variants[i], CombatStyle.Magic);
-                        slayerMonsterCombatStyleMagicHourlyRate.put(a.variants[i], 0);
-                    }
+        xp = new HashMap<>();
+        bank = new HashMap<>();
+        inventory = new HashMap<>();
+
+        // TODO: dummy;
+        for (Skills skill : Skills.values()) {
+            xp.put(skill, 13_034_431f);
+        }
+
+        // TODO: dummy
+        for (Items item : Items.values()) {
+            bank.put(item, 0f);
+            inventory.put(item, 0f);
+        }
+
+        // TODO: dummy
+        for (SlayerMonsters monster : SlayerMonsters.values()) {
+            Map<Monsters, Integer> variation = new HashMap<>();
+            slayerMonsterVariationOrder.put(monster, monster.getMonsters());
+
+            Monsters[] monsters = monster.getMonsters();
+            for (int i = 0; i < monsters.length; i ++) {
+                Monsters variant = monsters[i];
+                variation.put(variant, i == 0 ? 100 : 0);
+
+                if (variant.getStats().getSlayer() == null) {
+                    slayerMonsterCombatStyleMelee.put(variant, CombatStyle.Attack);
+                    slayerMonsterCombatStyleMeleeHourlyRate.put(variant, 110_000);
+                    slayerMonsterCombatStyleRanged.put(variant, CombatStyle.Ranged);
+                    slayerMonsterCombatStyleRangedHourlyRate.put(variant, 0);
+                    slayerMonsterCombatStyleMagic.put(variant, CombatStyle.Magic);
+                    slayerMonsterCombatStyleMagicHourlyRate.put(variant, 0);
+                }
+                else {
+                    slayerMonsterCombatStyleMelee.put(variant, CombatStyle.None);
+                    slayerMonsterCombatStyleMeleeHourlyRate.put(variant, 0);
+                    slayerMonsterCombatStyleRanged.put(variant, CombatStyle.Ranged);
+                    slayerMonsterCombatStyleRangedHourlyRate.put(variant, variant.getStats().getHitpoints() * 4);
+                    slayerMonsterCombatStyleMagic.put(variant, CombatStyle.None);
+                    slayerMonsterCombatStyleMeleeHourlyRate.put(variant, 0);
+                    slayerMonsterCompletionTime.put(variant, variant == Monsters.Zuk ? 75 : 30);
                 }
             }
+
+            slayerMonsterVariation.put(monster, variation);
         }
     }
 }

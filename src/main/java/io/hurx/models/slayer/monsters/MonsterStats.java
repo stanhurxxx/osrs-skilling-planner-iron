@@ -1,9 +1,10 @@
 package io.hurx.models.slayer.monsters;
 
-import io.hurx.models.slayer.LootItem;
 import java.util.List;
 import java.util.ArrayList;
 import javax.swing.ImageIcon;
+
+import io.hurx.models.items.LootItem;
 
 public class MonsterStats {
     public int getHitpoints() {

@@ -12,6 +12,14 @@ public abstract class View {
     public final ViewNames viewName;
 
     /**
+     * The skilling planner panel
+     * @return
+     */
+    public SkillingPlannerPanel getPanel() {
+        return panel;
+    }
+
+    /**
      * Ref to the panel
      */
     protected SkillingPlannerPanel panel;

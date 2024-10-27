@@ -1,5 +1,7 @@
 package io.hurx.models.items;
 
+import java.util.concurrent.ExecutionException;
+
 public enum Items {
     // Alchs
     AirBattlestaff(Item.Builder.id(1397).type(ItemType.Alch).build()),
@@ -32,6 +34,7 @@ public enum Items {
     MysticHatLight(Item.Builder.id(4109).type(ItemType.Alch).build()),
     MysticLavaStaff(Item.Builder.id(3054).type(ItemType.Alch).build()),
     MysticRobeBottom(Item.Builder.id(4093).type(ItemType.Alch).build()),
+    MysticRobeBottomLight(Item.Builder.id(4113).type(ItemType.Alch).build()),
     MysticRobeTop(Item.Builder.id(4091).type(ItemType.Alch).build()),
     MysticRobeTopLight(Item.Builder.id(4111).type(ItemType.Alch).build()),
     MysticRobeBottomsDark(Item.Builder.id(4103).type(ItemType.Alch).build()),
@@ -246,24 +249,6 @@ public enum Items {
     ;
 
     /**
-     * Gets the current price of the item
-     * @return
-     */
-    public int getPrice() {
-        return Item.manager.getItemPrice(this.item.getId());
-    }
-
-    /**
-     * Gets the name of the item
-     * @return
-     */
-    public String getName() {
-        return Item.manager == null
-            ? "Not loaded yet"
-            : Item.manager.getItemComposition(item.getId()).getName();
-    }
-
-    /**
      * Get the item instance
      * @return
      */
@@ -285,6 +270,6 @@ public enum Items {
 
     @Override
     public String toString() {
-        return getName(); // Override toString to return the string value
+        return item.getName();
     }
 }
