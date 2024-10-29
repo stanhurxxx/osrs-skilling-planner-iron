@@ -72,7 +72,7 @@ public class SlayerListsTable extends DefaultTable {
 
                     // Reset
                     JMenuItem reset = new JMenuItem("Reset list to defaults");
-                    export.addActionListener(ae -> {
+                    reset.addActionListener(ae -> {
                         view.resetDefaultsForList(list);
                     });
                     popupMenu.add(reset);

@@ -42,6 +42,7 @@ public class TargetXPTable extends DefaultTable {
     private List<Icon> icons;
 
     private List<Skills> skills = List.of(new Skills[] {
+        Skills.Slayer,
         Skills.Attack,
         Skills.Strength,
         Skills.Defence,
@@ -81,7 +82,7 @@ public class TargetXPTable extends DefaultTable {
             Integer amount = icons.get(index).getAmount();
             if (amount == null) return null;
 
-            return skills.get(index).getName() + " (Target): " + NumberFormat.getInstance(Locale.US).format(amount);
+            return skills.get(index).getName() + ": " + NumberFormat.getInstance(Locale.US).format(amount);
         }
     }
 

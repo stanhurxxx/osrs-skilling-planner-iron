@@ -1,12 +1,17 @@
 package io.hurx.cache.data;
 
 import io.hurx.models.CombatStyle;
+import io.hurx.models.slayer.SlayerBracelets;
 import io.hurx.models.slayer.masters.SlayerMasters;
 import io.hurx.models.slayer.monsters.Monsters;
 import io.hurx.models.slayer.monsters.SlayerMonsters;
+import io.hurx.views.slayer.SlayerOptions;
+import io.hurx.views.slayer.SlayerSubViewNames;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.UUID;
 
 /**
@@ -15,6 +20,7 @@ import java.util.UUID;
 public class SlayerListData {
     private String uuid = UUID.randomUUID().toString(); 
     private String name = "Untitled";
+    private SlayerSubViewNames subView = SlayerSubViewNames.ManageTasks;
     private SlayerMasters master = SlayerMasters.Duradel;
     private SlayerMonsters[] blocked = new SlayerMonsters[] {};
     private SlayerMonsters[] skipped = new SlayerMonsters[] {};
@@ -30,6 +36,9 @@ public class SlayerListData {
     private Map<Monsters, CombatStyle> magicStyles;
     private Map<Monsters, Integer> magicHourlyRates;
     private Map<Monsters, Integer> monsterCompletionTimes;
+    private Map<SlayerMonsters, SlayerBracelets> bracelets;
+    private CombatStyle combatStyleFilter = CombatStyle.DefenceLast;
+    private List<SlayerOptions> options;
 
     // Getters and setters for each field
 
@@ -152,6 +161,38 @@ public class SlayerListData {
         this.monsterCompletionTimes = monsterCompletionTimes;
     }
 
+    public Map<SlayerMonsters, SlayerBracelets> getBracelets() {
+        return bracelets;
+    }
+
+    public void setBracelets(Map<SlayerMonsters, SlayerBracelets> bracelets) {
+        this.bracelets = bracelets;
+    }
+
+    public SlayerSubViewNames getSubView() {
+        return subView;
+    }
+
+    public void setSubView(SlayerSubViewNames subView) {
+        this.subView = subView;
+    }
+
+    public CombatStyle getCombatStyleFilter() {
+        return combatStyleFilter;
+    }
+
+    public void setCombatStyleFilter(CombatStyle combatStyleFilter) {
+        this.combatStyleFilter = combatStyleFilter;
+    }
+
+    public List<SlayerOptions> getOptions() {
+        return options;
+    }
+
+    public void setOptions(List<SlayerOptions> options) {
+        this.options = options;
+    }
+
     public SlayerListData() {
         variations = new HashMap<>();
         extendedMonsers = new HashMap<>();
@@ -163,11 +204,22 @@ public class SlayerListData {
         magicHourlyRates = new HashMap<>();
         variationOrders = new HashMap<>();
         monsterCompletionTimes = new HashMap<>();
+        bracelets = new HashMap<>();
+        options = new ArrayList<>();
+        options.add(SlayerOptions.MoryLegs4);
+        options.add(SlayerOptions.Piety);
+        options.add(SlayerOptions.EagleEye);
+        options.add(SlayerOptions.Protection);
+        options.add(SlayerOptions.SuperCombatPotions);
+        options.add(SlayerOptions.RangingPotions);
+        options.add(SlayerOptions.SuperRestores);
+        options.add(SlayerOptions.SanfewSerums);
 
         // TODO: dummy
         for (SlayerMonsters monster : SlayerMonsters.values()) {
             Map<Monsters, Integer> variation = new HashMap<>();
             variationOrders.put(monster, monster.getMonsters());
+            bracelets.put(monster, SlayerBracelets.None);
 
             Monsters[] monsters = monster.getMonsters();
             for (int i = 0; i < monsters.length; i ++) {
@@ -175,7 +227,7 @@ public class SlayerListData {
                 variation.put(variant, i == 0 ? 100 : 0);
 
                 if (variant.getStats().getSlayer() == null) {
-                    meleeStyles.put(variant, CombatStyle.Attack);
+                    meleeStyles.put(variant, CombatStyle.DefenceLast);
                     meleeHourlyRates.put(variant, 110_000);
                     rangedStyles.put(variant, CombatStyle.Ranged);
                     rangedHourlyRates.put(variant, 0);

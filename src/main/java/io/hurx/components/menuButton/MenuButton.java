@@ -48,7 +48,7 @@ public abstract class MenuButton extends JPanel {
     public MenuButton(MenuIcons icon) {
         MenuButton button = this;
         this.icon = icon;
-        this.imageIcon = Resources.loadImageIcon(icon.getIconPath().getPath(), 256, 256);
+        this.imageIcon = Resources.loadImageIcon(icon.getIconPath().getPath(), 512, 512);
         vPadding = 2;
         hPadding = 2;
         addMouseListener(new MouseAdapter() {

@@ -100,7 +100,11 @@ public enum Items {
     DragonAxe(Item.Builder.id(6739).build()),
 
     // Supplies
+    PrayerPotion(Item.Builder.id(2434).build()),
     SuperRestore(Item.Builder.id(3024).build()),
+    SanfewSerum(Item.Builder.id(10925).build()),
+    SuperCombatPotion(Item.Builder.id(12695).build()),
+    RangingPotion(Item.Builder.id(2444).build()),
 
     // Seeds
     AvantoeSeed(Item.Builder.id(5298).build()),
@@ -250,6 +254,9 @@ public enum Items {
     ClueScrollElite(Item.Builder.id(12073).build()),
     ClueScrollMaster(Item.Builder.id(19835).build()),
     CrystalShard(Item.Builder.id(23962).build()),
+
+    // Meta
+    MorytaniaLegs4(Item.Builder.id(13115).type(ItemType.Meta).build())
     ;
 
     /**

@@ -1,10 +1,10 @@
 package io.hurx.models;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public enum CombatStyle {
     None("None", IconPaths.CombatStyleNone),
+    DefenceLast("Defence Last", IconPaths.SkillEHP),
     Controlled("Controlled", IconPaths.CombatStyleControlled),
     Attack("Attack", IconPaths.CombatStyleAttack),
     Strength("Strength", IconPaths.CombatStyleStrength),
@@ -45,7 +45,8 @@ public enum CombatStyle {
         CombatStyle.Controlled,
         CombatStyle.Attack,
         CombatStyle.Strength,
-        CombatStyle.Defence
+        CombatStyle.Defence,
+        CombatStyle.DefenceLast
     });
 
     public static List<CombatStyle> getRangedStyles() {
@@ -88,11 +89,11 @@ public enum CombatStyle {
         CombatStyle.ShadowBarrageDefensive,
     });
 
-    public String getDisplayName() {
-        return displayName;
+    public String getName() {
+        return name;
     }
 
-    private final String displayName;
+    private final String name;
 
     public IconPaths getIconPath() {
         return iconPath;
@@ -101,13 +102,13 @@ public enum CombatStyle {
     private final IconPaths iconPath;
 
     // Constructor for the enum
-    CombatStyle(String displayName, IconPaths iconPath) {
-        this.displayName = displayName;
+    CombatStyle(String name, IconPaths iconPath) {
+        this.name = name;
         this.iconPath = iconPath;
     }
 
     @Override
     public String toString() {
-        return displayName; // Override toString to return the string value
+        return name; // Override toString to return the string value
     }
 }

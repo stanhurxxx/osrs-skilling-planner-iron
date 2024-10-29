@@ -6,7 +6,9 @@ import io.hurx.Theme;
 import io.hurx.cache.data.CacheData;
 import io.hurx.cache.data.SlayerListData;
 import io.hurx.components.Icon;
+import io.hurx.models.items.Items;
 import io.hurx.models.slayer.SlayerAssignment;
+import io.hurx.models.slayer.SlayerBracelets;
 import io.hurx.models.slayer.monsters.SlayerMonsters;
 import io.hurx.views.slayer.SlayerView;
 
@@ -145,14 +147,7 @@ public class TasksTable extends DefaultTable {
                         }
                         list.setSkipped(skipped.toArray(new SlayerMonsters[skipped.size()]));
                         list.setBlocked(blocked.toArray(new SlayerMonsters[blocked.size()]));
-                        try {
-                            panel.getCache().save();
-                            table.revalidate();
-                            table.repaint();
-                        }
-                        catch (Exception ex) {
-                            ex.printStackTrace();
-                        }
+                        saveCache();
                     });
                     JMenuItem blockItem = new JMenuItem("Block");
                     blockItem.addActionListener(ae -> {
@@ -164,14 +159,7 @@ public class TasksTable extends DefaultTable {
                         }
                         list.setSkipped(skipped.toArray(new SlayerMonsters[skipped.size()]));
                         list.setBlocked(blocked.toArray(new SlayerMonsters[blocked.size()]));
-                        try {
-                            panel.getCache().save();
-                            table.revalidate();
-                            table.repaint();
-                        }
-                        catch (Exception ex) {
-                            ex.printStackTrace();
-                        }
+                        saveCache();
                     });
                     JMenuItem skipItem = new JMenuItem("Skip");
                     skipItem.addActionListener(ae -> {
@@ -183,14 +171,7 @@ public class TasksTable extends DefaultTable {
                         }
                         list.setSkipped(skipped.toArray(new SlayerMonsters[skipped.size()]));
                         list.setBlocked(blocked.toArray(new SlayerMonsters[blocked.size()]));
-                        try {
-                            panel.getCache().save();
-                            table.revalidate();
-                            table.repaint();
-                        }
-                        catch (Exception ex) {
-                            ex.printStackTrace();
-                        }
+                        saveCache();
                     });
                     if (skipped.contains(monster.getMonster())) {
                         popupMenu.add(doItem);
@@ -203,6 +184,39 @@ public class TasksTable extends DefaultTable {
                     else {
                         popupMenu.add(skipItem);
                         popupMenu.add(blockItem);
+                    }
+                    SlayerBracelets bracelet = data.getSlayer().getList().getBracelets().get(monster.getMonster());
+                    JMenuItem slaughter = new JMenuItem("Use slaughter bracelets");
+                    slaughter.addActionListener(ae -> {
+                        data.getSlayer().getList().getBracelets().put(monster.getMonster(), SlayerBracelets.Slaughter);
+                        saveCache();
+                    });
+                    JMenuItem expeditious = new JMenuItem("Use expeditious bracelets");
+                    expeditious.addActionListener(ae -> {
+                        data.getSlayer().getList().getBracelets().put(monster.getMonster(), SlayerBracelets.Expeditious);
+                        saveCache();
+                    });
+                    if (bracelet == SlayerBracelets.None) {
+                        popupMenu.add(slaughter);
+                        popupMenu.add(expeditious);
+                    }
+                    else if (bracelet == SlayerBracelets.Slaughter) {
+                        JMenuItem none = new JMenuItem("No slaughter bracelets");
+                        none.addActionListener(ae -> {
+                            data.getSlayer().getList().getBracelets().put(monster.getMonster(), SlayerBracelets.None);
+                            saveCache();
+                        });
+                        popupMenu.add(none);
+                        popupMenu.add(expeditious);
+                    }
+                    else {
+                        JMenuItem none = new JMenuItem("No expeditious bracelets");
+                        none.addActionListener(ae -> {
+                            data.getSlayer().getList().getBracelets().put(monster.getMonster(), SlayerBracelets.None);
+                            saveCache();
+                        });
+                        popupMenu.add(slaughter);
+                        popupMenu.add(none);
                     }
                     popupMenu.show(e.getComponent(), e.getX(), e.getY());
                 }
@@ -247,14 +261,31 @@ public class TasksTable extends DefaultTable {
                     list.add(new JLabel(""));
                     continue loop;
                 }
+                Icon icon = new Icon(
+                    Resources.loadImageIcon(assignments[index].getMonster().getIconPath().getPath(), ICON_SIZE, ICON_SIZE),
+                    (int)Math.round(Math.random() * 500000 + (Math.random() > 0.5 ? 10000000 : 0))
+                );
+                SlayerBracelets bracelet = panel.getCache().getData().getSlayer().getList().getBracelets().get(assignments[index].getMonster());
+                if (bracelet != null && bracelet != SlayerBracelets.None) {
+                    icon.setSubIcon(bracelet.getItem().getItem().getIcon());
+                }
                 list.add(
-                    new Icon(
-                        Resources.loadImageIcon(assignments[index].getMonster().getIconPath().getPath(), ICON_SIZE, ICON_SIZE),
-                        (int)Math.round(Math.random() * 500000 + (Math.random() > 0.5 ? 10000000 : 0))
-                    )
+                    icon
                 );
             }
             model.addRow(list.toArray());
+        }
+    }
+
+    public void saveCache() {
+        try {
+            panel.getCache().save();
+            fillTableModel();
+            revalidate();
+            repaint();
+        }
+        catch (Exception ex) {
+            ex.printStackTrace();
         }
     }
 

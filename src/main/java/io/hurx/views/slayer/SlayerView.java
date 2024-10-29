@@ -12,6 +12,7 @@ import io.hurx.components.MultiComboBox;
 import io.hurx.components.Padding;
 import io.hurx.components.PlainLabel;
 import io.hurx.components.TitleLabel;
+import io.hurx.components.abbreviatedNumberFormattedTextField.AbbreviatedNumberFormattedTextField;
 import io.hurx.models.CombatStyle;
 import io.hurx.models.IconPaths;
 import io.hurx.models.MenuIcons;
@@ -26,6 +27,10 @@ import io.hurx.views.slayer.components.targetXP.TargetXPTable;
 import io.hurx.views.slayer.components.list.tasks.TasksTable;
 import io.hurx.views.slayer.components.list.variants.CombatStyleTable;
 import io.hurx.views.slayer.components.list.variants.VariantTable;
+import io.hurx.views.slayer.components.manage.options.SlayerOptionsTable;
+import io.hurx.views.slayer.components.manage.xpRates.TextFieldContainer;
+import io.hurx.views.slayer.components.manage.xpRates.XpRateCombatStyles;
+import io.hurx.views.slayer.components.manage.xpRates.XpRateMonsters;
 import io.hurx.views.slayer.components.overview.SlayerOverviewPercentageTable;
 import io.hurx.views.slayer.components.overview.SlayerOverviewTable;
 import io.hurx.views.slayer.components.planner.SlayerListsTable;
@@ -70,6 +75,9 @@ import java.awt.Color;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.UUID;
+import java.util.function.Predicate;
+import java.util.HashMap;
+import javax.swing.BorderFactory;
 
 /**
  * The slayer view
@@ -98,12 +106,24 @@ public class SlayerView extends View {
 
     private TitleLabel listMasterLabel;
     private MasterTable listMasterTable;
+    private TitleLabel listManageTitleLabel;
     private TitleLabel listTasksTitleLabel;
     private TasksTable listTasksTable;
     private VariantTable listVariantTable;
     private PlainLabel listVariantXpDistributionLabel = new PlainLabel("Rates");
     private PlainLabel listVariantCompletionTimeLabel = new PlainLabel("Completion time");
     private CombatStyleTable listVariantCombatStyleTable;
+
+    private int listManageXPRatesIndex = -1;
+    private int listManageOptionsIndex = -1;
+    private List<TextFieldContainer> listManageXPRatesTextFieldContainers;
+    private List<XpRateMonsters> listManageXPRatesMonsters;
+    private List<Padding> listManageXPRatesPaddings;
+    private TitleLabel listManageXpRatesLabel;
+    private PlainLabel listManageXpRatesChangeStyleLabel;
+    private XpRateCombatStyles listManageXpRatesCombatStyles;
+    private TitleLabel listManageOptionsLabel;
+    private SlayerOptionsTable listManageOptionsTable;
     
     private TitleLabel targetXPLabel = new TitleLabel("Target XP");
     private TargetXPTable targetXPTable;
@@ -111,7 +131,7 @@ public class SlayerView extends View {
     private LootTable alchLootTable;
     private TitleLabel dropTradeLootLabel = new TitleLabel("Drop trade loot");
     private LootTable dropTradeLootTable;
-    private TitleLabel suppliesLabel = new TitleLabel("Supplies");
+    private TitleLabel suppliesLabel = new TitleLabel("Supplies", true);
     private PlainLabel suppliesGainedLabel = new PlainLabel("Gained");
     private LootTable suppliesGainedLootTable;
     private PlainLabel suppliesCostLabel = new PlainLabel("Cost");
@@ -191,6 +211,7 @@ public class SlayerView extends View {
                 panel.add(overviewLabel);
                 panel.add(overviewTable);
                 panel.add(overviewPercentageTable);
+                targetXPLabel = new TitleLabel("Target XP");
                 panel.add(targetXPLabel);
                 panel.add(targetXPTable);
                 panel.add(alchLootLabel);
@@ -294,7 +315,7 @@ public class SlayerView extends View {
                 }
             };
             text.setText(list.getName());
-            text.setBackground(Theme.BG_COLOR);
+            text.setBackground(Theme.TABLE_BG_COLOR_HOVER);
             listMasterLabel = new TitleLabel(text, new Component[] {
                 new MenuButton(MenuIcons.Reset) {
                     @Override
@@ -308,9 +329,28 @@ public class SlayerView extends View {
                         saveSlayerList(list);
                     }
                 }
-            });
+            }, true);
             
             listMasterTable = new MasterTable(this);
+
+            listManageTitleLabel = new TitleLabel("View", new Component[] {
+                createListManageComboBox()
+            }) {
+                @Override
+                public void initialize() {
+                    super.initialize();
+                    int labelWidth = 58;
+                    getColumnModel().getColumn(0).setMinWidth(labelWidth);
+                    getColumnModel().getColumn(0).setMaxWidth(labelWidth);
+                    getColumnModel().getColumn(0).setWidth(labelWidth);
+                    getColumnModel().getColumn(0).setPreferredWidth(labelWidth);
+
+                    getColumnModel().getColumn(1).setMinWidth(223 - labelWidth + 15);
+                    getColumnModel().getColumn(1).setMaxWidth(223 - labelWidth + 15);
+                    getColumnModel().getColumn(1).setWidth(223 - labelWidth + 15);
+                    getColumnModel().getColumn(1).setPreferredWidth(223 - labelWidth + 15);
+                }
+            };
             listTasksTitleLabel = new TitleLabel("Tasks", new Component[] {
                 createListTasksComboBox()
             }) {
@@ -337,17 +377,135 @@ public class SlayerView extends View {
             dropTradeLootTable = new LootTable(this);
             suppliesGainedLootTable = new LootTable(this);
             suppliesCostLootTable = new LootTable(this);
+            listManageXpRatesLabel = new TitleLabel("Rates", new Component[] {
+                createListManageXpRatesComboBox()
+            }) {
+                @Override
+                public void initialize() {
+                    super.initialize();
+                    int labelWidth = 65;
+                    getColumnModel().getColumn(0).setMinWidth(labelWidth);
+                    getColumnModel().getColumn(0).setMaxWidth(labelWidth);
+                    getColumnModel().getColumn(0).setWidth(labelWidth);
+                    getColumnModel().getColumn(0).setPreferredWidth(labelWidth);
+
+                    getColumnModel().getColumn(1).setMinWidth(223 - labelWidth + 15);
+                    getColumnModel().getColumn(1).setMaxWidth(223 - labelWidth + 15);
+                    getColumnModel().getColumn(1).setWidth(223 - labelWidth + 15);
+                    getColumnModel().getColumn(1).setPreferredWidth(223 - labelWidth + 15);
+                }
+            };
+
+            listManageOptionsLabel = new TitleLabel("Options");
 
             panel.add(listMasterLabel);
+            panel.add(listManageTitleLabel);
             panel.add(listMasterTable);
-    
-            panel.add(listTasksTitleLabel);
+            
+            SlayerSubViewNames subView = list.getSubView();
+            if (subView == SlayerSubViewNames.ManageTasks) {
+                panel.add(listTasksTitleLabel);
 
-            SlayerMonsters monster = list.getSelectedMonster();
-            Monsters variant = list.getSelectedVariant();
-            setSelectedMonster(monster);
-            if (variant != null) setSelectedVariant(variant);
+                SlayerMonsters monster = list.getSelectedMonster();
+                Monsters variant = list.getSelectedVariant();
+                setSelectedMonster(monster);
+                if (variant != null) setSelectedVariant(variant);
+            }
+            else if (subView == SlayerSubViewNames.ManageXPRates) {
+                panel.add(listManageXpRatesLabel);
+                listManageXPRatesIndex = panel.getComponentCount();
+                updateManageXPRatesSubView();
+            }
+            else if (subView == SlayerSubViewNames.ManageOptions) {
+                panel.add(listManageOptionsLabel);
+                listManageOptionsIndex = panel.getComponentCount();
+                updateManageXPRatesOptionsSubView();
+            }
         }
+    }
+
+    public void updateManageXPRatesOptionsSubView() {
+        if (listManageOptionsIndex == -1) return;
+        for (int i = listManageOptionsIndex; i < panel.getComponentCount(); i ++) {
+            if (panel.getComponentCount() > i) {
+                panel.remove(i);
+            }
+        }
+        listManageOptionsTable = new SlayerOptionsTable(this);
+        panel.add(listManageOptionsTable);
+        panel.revalidate();
+        panel.repaint();
+    }
+
+    public void updateManageXPRatesSubView() {
+        if (listManageXPRatesIndex == -1) return;
+        for (int i = listManageXPRatesIndex; i < panel.getComponentCount(); i ++) {
+            panel.remove(i);
+        }
+        listManageXPRatesTextFieldContainers = new ArrayList<>();
+        listManageXPRatesPaddings = new ArrayList<>();
+        listManageXPRatesMonsters = new ArrayList<>();
+        CacheData data = panel.getCache().getData();
+        SlayerListData list = data.getSlayer().getList();
+        if (list == null) return;
+
+        CombatStyle combatStyle = list.getCombatStyleFilter();
+        Map<Integer, List<Monsters>> values = new HashMap<>();
+        for (Object raw : new Object[] { new Object[] { list.getMeleeHourlyRates(), list.getMeleeStyles() }, new Object[] { list.getMagicHourlyRates(), list.getMagicStyles() }, new Object[] { list.getRangedHourlyRates(), list.getRangedStyles() } }) {
+            Map<Monsters, Integer> hourlyRates = (Map<Monsters, Integer>) ((Object[])raw)[0];
+            Map<Monsters, CombatStyle> combatStyles = (Map<Monsters, CombatStyle>) ((Object[])raw)[1];
+            
+            for (Monsters monster : combatStyles.keySet()) {
+                CombatStyle style = combatStyles.get(monster);
+                if (style != combatStyle) continue;
+
+                List<Monsters> existingBatch = values.get(hourlyRates.get(monster));
+                List<Monsters> batch = existingBatch == null ? new ArrayList<>() : existingBatch;
+                if (batch.indexOf(monster) == -1) {
+                    batch.add(monster);
+                }
+                values.put(hourlyRates.get(monster), batch);
+            }
+        }
+
+        List<Integer> integers = new ArrayList<>();
+        for (int integer : values.keySet()) {
+            integers.add(integer);
+        }
+        integers.sort(new Comparator<Integer>() {
+            @Override
+            public int compare(Integer o1, Integer o2) {
+                return Integer.compare(o2, o1);
+            }
+        });
+        for (Integer value : integers) {
+            if (value == null) continue;
+
+            List<Monsters> monsters = values.get(value);
+            listManageXPRatesMonsters.add(new XpRateMonsters(this, monsters));
+
+            AbbreviatedNumberFormattedTextField textField = new AbbreviatedNumberFormattedTextField();
+            textField.setValue(value);
+            textField.setBackground(Theme.TABLE_BG_COLOR_HOVER);
+            textField.setBorder(BorderFactory.createEmptyBorder());
+            TextFieldContainer textFieldContainer = new TextFieldContainer(integers.indexOf(value), this, textField);
+            
+            Padding padding = new Padding();
+            listManageXPRatesPaddings.add(padding);
+
+            listManageXPRatesTextFieldContainers.add(textFieldContainer);
+        }
+        for (int i = 0; i < listManageXPRatesTextFieldContainers.size(); i ++) {
+            panel.add(listManageXPRatesMonsters.get(i));
+            panel.add(listManageXPRatesTextFieldContainers.get(i));
+            if (i < listManageXPRatesTextFieldContainers.size() - 1) panel.add(listManageXPRatesPaddings.get(i));
+        }
+        listManageXpRatesChangeStyleLabel = new PlainLabel("Change styles to");
+        listManageXpRatesCombatStyles = new XpRateCombatStyles(this);
+        panel.add(listManageXpRatesChangeStyleLabel);
+        panel.add(listManageXpRatesCombatStyles);
+        panel.revalidate();
+        panel.repaint();
     }
 
     /**
@@ -403,16 +561,16 @@ public class SlayerView extends View {
             listTasksTitleLabel.revalidate();
             listTasksTitleLabel.repaint();
             if (monster == null) {
-                for (int i = panel.getComponentCount() - 1; i >= 4; i --) {
+                for (int i = panel.getComponentCount() - 1; i >= 5; i --) {
                     panel.remove(i);
                 }
-                panel.add(listTasksTable, 4);
+                panel.add(listTasksTable, 5);
             }
             else {
-                for (int i = panel.getComponentCount() - 1; i >= 4; i --) {
+                for (int i = panel.getComponentCount() - 1; i >= 5; i --) {
                     panel.remove(i);
                 }
-                panel.add(listVariantTable, 4);
+                panel.add(listVariantTable, 5);
                 if (list.getSelectedVariant().getStats().getSlayer() == null) {
                     panel.add(listVariantXpDistributionLabel);
                 }
@@ -423,6 +581,7 @@ public class SlayerView extends View {
                 listVariantTable.fillTableModel();
                 listVariantCombatStyleTable.fillTableModel();
             }
+            targetXPLabel = new TitleLabel("XP gained");
             panel.add(targetXPLabel);
             panel.add(targetXPTable);
             panel.add(alchLootLabel);
@@ -457,12 +616,12 @@ public class SlayerView extends View {
         }
         finally {
             // Change the label
-            this.panel.remove(5);
+            this.panel.remove(6);
             if (variant.getStats().getSlayer() == null) {
-                this.panel.add(listVariantXpDistributionLabel, 5);
+                this.panel.add(listVariantXpDistributionLabel, 6);
             }
             else {
-                this.panel.add(listVariantCompletionTimeLabel, 5);
+                this.panel.add(listVariantCompletionTimeLabel, 6);
             }
 
             // Reload the view
@@ -998,6 +1157,10 @@ public class SlayerView extends View {
         }
     }
 
+    public void editXPRate(int index, int xpRate) {
+        System.out.println("Index: " + index + "; Xp rate: " + xpRate);
+    }
+
     public void editPlanning(SlayerPlanningData planning, int startXp) {
         planning.setCreatedAt(System.currentTimeMillis());
         planning.setStartXP(startXp);
@@ -1270,6 +1433,234 @@ public class SlayerView extends View {
                     setSelectedMonster(selectedOption.icon == null ? selectedOption.monster : null);
                     panel.revalidate();
                     panel.repaint();
+                }
+            }
+        });
+
+        return cb;
+    } 
+
+    private JComboBox<SlayerSubViewNames> createListManageComboBox() {
+        CacheData data = panel.getCache().getData();
+        SlayerListData slayerList = data.getSlayer().getList();
+        if (slayerList == null) return null;
+
+        SlayerSubViewNames subView = slayerList.getSubView();
+
+        List<SlayerSubViewNames> comboBoxValues = new ArrayList<>();
+        for (SlayerSubViewNames s : SlayerSubViewNames.values()) {
+            comboBoxValues.add(s);
+        }
+
+        JComboBox<SlayerSubViewNames> cb = new JComboBox<>(comboBoxValues.toArray(new SlayerSubViewNames[comboBoxValues.size()])) {
+            @Override
+            public String getToolTipText(MouseEvent e) {
+                SlayerSubViewNames item = (SlayerSubViewNames)getSelectedItem();
+                return item == null
+                    ? null
+                    : item.getDescription();
+            }
+        };
+        cb.setSelectedItem(subView);
+
+        cb.setRenderer(new ListCellRenderer<SlayerSubViewNames>() {
+            @Override
+            public Component getListCellRendererComponent(
+                    JList<? extends SlayerSubViewNames> list,
+                    SlayerSubViewNames value,
+                    int index,
+                    boolean isSelected,
+                    boolean cellHasFocus) {
+
+                JLabel label = new JLabel();
+
+                if (value == null) {
+                    label.setText("Select an option");
+                }
+                else {
+                    label.setText(value.getName());
+                    label.setIcon(Resources.loadImageIcon(value.getIconPath().getPath(), 18, 18));
+                }
+
+                label.setOpaque(true);
+
+                if (
+                    value == null || value == data.getSlayer().getList().getSubView()
+                ) {
+                    label.setBackground(Theme.TABLE_BG_COLOR_SELECTED);
+                    label.setForeground(Color.white);
+                }
+                else if (isSelected) {
+                    label.setBackground(Theme.TABLE_BG_COLOR_HOVER);
+                    label.setForeground(Color.white);
+                }
+                else {
+                    label.setBackground(Theme.TABLE_BG_COLOR);
+                    label.setForeground(Color.white);
+                }
+
+                return label;
+            }
+        });
+
+        cb.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                SlayerSubViewNames selectedOption = (SlayerSubViewNames)cb.getSelectedItem();
+
+                if (selectedOption != null && selectedOption != data.getSlayer().getList().getSubView()) {
+                    data.getSlayer().getList().setSubView(selectedOption);
+                    try {
+                        panel.getCache().save();
+                        load();
+                    }
+                    catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            }
+        });
+
+        return cb;
+    } 
+
+    private JComboBox<CombatStyle> createListManageXpRatesComboBox() {
+        CacheData data = panel.getCache().getData();
+        SlayerListData slayerList = data.getSlayer().getList();
+        if (slayerList == null) return null;
+
+        CombatStyle filter = slayerList.getCombatStyleFilter();
+
+        List<CombatStyle> comboBoxValues = new ArrayList<>();
+        for (CombatStyle style : new CombatStyle[] {
+            CombatStyle.DefenceLast,
+            CombatStyle.Controlled,
+            CombatStyle.Attack,
+            CombatStyle.Strength,
+            CombatStyle.Defence,
+            CombatStyle.Ranged,
+            CombatStyle.RangedDefensive,
+            CombatStyle.RegChinsShort,
+            CombatStyle.RegChinsMedium,
+            CombatStyle.RegChinsLong,
+            CombatStyle.RedChinsShort,
+            CombatStyle.RedChinsMedium,
+            CombatStyle.RedChinsLong,
+            CombatStyle.BlackChinsShort,
+            CombatStyle.BlackChinsMedium,
+            CombatStyle.BlackChinsLong,
+            CombatStyle.Magic,
+            CombatStyle.IceBurst,
+            CombatStyle.IceBurstDefensive,
+            CombatStyle.BloodBurst,
+            CombatStyle.BloodBurstDefensive,
+            CombatStyle.SmokeBurst,
+            CombatStyle.SmokeBurstDefensive,
+            CombatStyle.ShadowBurst,
+            CombatStyle.ShadowBurstDefensive,
+            CombatStyle.IceBarrage,
+            CombatStyle.IceBarrageDefensive,
+            CombatStyle.BloodBarrage,
+            CombatStyle.BloodBarrageDefensive,
+            CombatStyle.SmokeBarrage,
+            CombatStyle.SmokeBarrageDefensive,
+            CombatStyle.ShadowBarrage,
+            CombatStyle.ShadowBarrageDefensive
+        }) {
+            for (Monsters monster : Monsters.values()) {
+                if (monster == Monsters.Jad || monster == Monsters.Zuk) continue;
+                CombatStyle melee = slayerList.getMeleeStyles().get(monster);
+                CombatStyle ranged = slayerList.getRangedStyles().get(monster);
+                CombatStyle magic = slayerList.getMagicStyles().get(monster);
+                if (melee == style) {
+                    Integer hourlyRate = slayerList.getMeleeHourlyRates().get(monster);
+                    if (hourlyRate > 0) {
+                        comboBoxValues.add(style);
+                        break;
+                    }
+                }
+                else if (ranged == style) {
+                    Integer hourlyRate = slayerList.getRangedHourlyRates().get(monster);
+                    if (hourlyRate > 0) {
+                        comboBoxValues.add(style);
+                        break;
+                    }
+                }
+                else if (magic == style) {
+                    Integer hourlyRate = slayerList.getMagicHourlyRates().get(monster);
+                    if (hourlyRate > 0) {
+                        comboBoxValues.add(style);
+                        break;
+                    }
+                }
+            }
+        }
+
+        JComboBox<CombatStyle> cb = new JComboBox<>(comboBoxValues.toArray(new CombatStyle[comboBoxValues.size()])) {
+            @Override
+            public String getToolTipText(MouseEvent e) {
+                CombatStyle item = (CombatStyle)getSelectedItem();
+                return item == null
+                    ? null
+                    : item.getName();
+            }
+        };
+        cb.setSelectedItem(filter);
+
+        cb.setRenderer(new ListCellRenderer<CombatStyle>() {
+            @Override
+            public Component getListCellRendererComponent(
+                    JList<? extends CombatStyle> list,
+                    CombatStyle value,
+                    int index,
+                    boolean isSelected,
+                    boolean cellHasFocus) {
+
+                JLabel label = new JLabel();
+
+                if (value == null) {
+                    label.setText("Select an option");
+                }
+                else {
+                    label.setText(value.getName());
+                    label.setIcon(Resources.loadImageIcon(value.getIconPath().getPath(), 18, 18));
+                }
+
+                label.setOpaque(true);
+
+                if (
+                    value == null || value == slayerList.getCombatStyleFilter()
+                ) {
+                    label.setBackground(Theme.TABLE_BG_COLOR_SELECTED);
+                    label.setForeground(Color.white);
+                }
+                else if (isSelected) {
+                    label.setBackground(Theme.TABLE_BG_COLOR_HOVER);
+                    label.setForeground(Color.white);
+                }
+                else {
+                    label.setBackground(Theme.TABLE_BG_COLOR);
+                    label.setForeground(Color.white);
+                }
+
+                return label;
+            }
+        });
+
+        cb.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                CombatStyle selectedOption = (CombatStyle)cb.getSelectedItem();
+
+                if (selectedOption != null && selectedOption != slayerList.getCombatStyleFilter()) {
+                    data.getSlayer().getList().setCombatStyleFilter(selectedOption);
+                    try {
+                        panel.getCache().save();
+                        load();
+                    }
+                    catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
                 }
             }
         });

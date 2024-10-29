@@ -172,7 +172,7 @@ public class CombatStyleTable extends DefaultTable {
                                 for (CombatStyle combatStyle : CombatStyle.getMeleeStyles()) {
                                     if (combatStyle == style) continue;
     
-                                    JMenuItem item = new JMenuItem(combatStyle.getDisplayName());
+                                    JMenuItem item = new JMenuItem(combatStyle.getName());
                                     item.addActionListener(ae -> {
                                         view.setCombatStyleForVariant(combatStyle);
                                     });
@@ -186,7 +186,7 @@ public class CombatStyleTable extends DefaultTable {
                                 for (CombatStyle combatStyle : CombatStyle.getRangedStyles()) {
                                     if (combatStyle == style) continue;
     
-                                    JMenuItem item = new JMenuItem(combatStyle.getDisplayName());
+                                    JMenuItem item = new JMenuItem(combatStyle.getName());
                                     item.addActionListener(ae -> {
                                         view.setCombatStyleForVariant(combatStyle);
                                     });
@@ -200,7 +200,7 @@ public class CombatStyleTable extends DefaultTable {
                                 for (CombatStyle combatStyle : CombatStyle.getMagicStyles()) {
                                     if (combatStyle == style) continue;
     
-                                    JMenuItem item = new JMenuItem(combatStyle.getDisplayName());
+                                    JMenuItem item = new JMenuItem(combatStyle.getName());
                                     item.addActionListener(ae -> {
                                         view.setCombatStyleForVariant(combatStyle);
                                     });
@@ -272,7 +272,7 @@ public class CombatStyleTable extends DefaultTable {
                 case 0: {
                     switch (colIndex) {
                         case 0: {
-                            return list.getMeleeStyles().get(monster).getDisplayName();
+                            return list.getMeleeStyles().get(monster).getName();
                         }
                         case 1: {
                             return "Set a melee xp rate for this monster";
@@ -282,7 +282,7 @@ public class CombatStyleTable extends DefaultTable {
                 case 1: {
                     switch (colIndex) {
                         case 0: {
-                            return list.getRangedStyles().get(monster).getDisplayName();
+                            return list.getRangedStyles().get(monster).getName();
                         }
                         case 1: {
                             return "Set a ranged xp rate for this monster";
@@ -292,7 +292,7 @@ public class CombatStyleTable extends DefaultTable {
                 case 2: {
                     switch (colIndex) {
                         case 0: {
-                            return list.getMagicStyles().get(monster).getDisplayName();
+                            return list.getMagicStyles().get(monster).getName();
                         }
                         case 1: {
                             return "Set a magic xp rate for this monster";

@@ -174,6 +174,13 @@ public enum IconPaths {
     MenuUpload("icons/menu/upload.png"),
     MenuDownload("icons/menu/download.png"),
     MenuReset("icons/menu/reload.png"),
+
+    PrayerAugury("icons/prayers/augury.png"),
+    PrayerEagleEye("icons/prayers/eagle-eye.png"),
+    PrayerMysticMight("icons/prayers/mystic-might.png"),
+    PrayerPiety("icons/prayers/piety.png"),
+    PrayerRigour("icons/prayers/rigour.png"),
+    PrayerProtection("icons/prayers/protection.png"),
     ;
 
     public String getPath() {

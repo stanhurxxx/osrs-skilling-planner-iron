@@ -46,6 +46,14 @@ public class Icon extends JPanel {
     }
     private int vPadding = 10;
 
+    public ImageIcon getSubIcon() {
+        return this.subIcon;
+    }
+    public void setSubIcon(ImageIcon subIcon) {
+        this.subIcon = subIcon;
+    }
+    private ImageIcon subIcon;
+
     public Icon(ImageIcon icon) {
         this.icon = icon;
         this.amount = null;
@@ -79,6 +87,10 @@ public class Icon extends JPanel {
                     : Integer.toString(getAmount());
             g.setFont(new Font("Arial", Font.PLAIN, 12));
             g.drawString(string, 2, 12); // Adjust the position as necessary
+        }
+        // Draw the sub icon
+        if (subIcon != null) {
+            g.drawImage(subIcon.getImage(), (int)Math.round(getWidth() * 0.4), (int)Math.round(getWidth() * 0.4), (int)Math.round(getWidth() * 0.6), (int)Math.round(getWidth() * 0.6), this);
         }
     }
 }

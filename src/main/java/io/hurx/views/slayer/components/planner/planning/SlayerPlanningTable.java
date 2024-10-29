@@ -6,7 +6,6 @@ import io.hurx.cache.data.SlayerPlanningData;
 import io.hurx.components.abbreviatedNumberFormattedTextField.AbbreviatedNumberFormattedTextField;
 import io.hurx.components.abbreviatedNumberFormattedTextField.AbbreviatedNumberFormattedTextFieldCellEditor;
 import io.hurx.components.table.defaultTable.DefaultTable;
-import io.hurx.components.textField.TextFieldCellEditor;
 import io.hurx.views.slayer.SlayerView;
 import java.awt.Component;
 
@@ -15,13 +14,10 @@ import javax.swing.JLabel;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.JTable;
 import javax.swing.SwingConstants;
-import java.text.NumberFormat;
-import java.util.Locale;
 import javax.swing.BorderFactory;
 import java.util.EventObject;
 import java.awt.event.MouseEvent;
 import java.math.BigDecimal;
-import java.awt.event.KeyEvent;
 
 public class SlayerPlanningTable extends DefaultTable {
     public final static int ICON_SIZE = 24;

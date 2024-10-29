@@ -29,6 +29,11 @@ public class TitleLabel extends DefaultTable {
 
     private JTextField textField;
 
+    private void setNoBottomPadding() {
+        this.noBottomPadding = true;
+    }
+    private boolean noBottomPadding = false;
+
     /**
      * The other columns
      */
@@ -44,6 +49,16 @@ public class TitleLabel extends DefaultTable {
         super(DefaultTable.Options.Builder.construct().columnCount(1).build());
         this.label = new JLabel(text);
         this.otherColumns = new Component[] {};
+        this.noBottomPadding = false;
+        fillTableModel();
+        initialize();
+    }
+    
+    public TitleLabel(String text, boolean noBottomPadding) {
+        super(DefaultTable.Options.Builder.construct().columnCount(1).build());
+        this.label = new JLabel(text);
+        this.otherColumns = new Component[] {};
+        this.noBottomPadding = noBottomPadding;
         fillTableModel();
         initialize();
     }
@@ -56,6 +71,15 @@ public class TitleLabel extends DefaultTable {
         initialize();
     }
 
+    public TitleLabel(String text, Component[] otherColumns, boolean noBottomPadding) {
+        super(DefaultTable.Options.Builder.construct().columnCount(1 + otherColumns.length).build());
+        this.label = new JLabel(text);
+        this.otherColumns = otherColumns;
+        this.noBottomPadding = noBottomPadding;
+        fillTableModel();
+        initialize();
+    }
+
     public TitleLabel(JTextField text) {
         super(DefaultTable.Options.Builder.construct().columnCount(1).build());
         this.textField = text;
@@ -64,10 +88,28 @@ public class TitleLabel extends DefaultTable {
         initialize();
     }
 
+    public TitleLabel(JTextField text, boolean noBottomPadding) {
+        super(DefaultTable.Options.Builder.construct().columnCount(1).build());
+        this.textField = text;
+        this.otherColumns = new Component[] {};
+        this.noBottomPadding = noBottomPadding;
+        fillTableModel();
+        initialize();
+    }
+
     public TitleLabel(JTextField text, Component[] otherColumns) {
         super(DefaultTable.Options.Builder.construct().columnCount(1 + otherColumns.length).build());
         this.textField = text;
         this.otherColumns = otherColumns;
+        fillTableModel();
+        initialize();
+    }
+
+    public TitleLabel(JTextField text, Component[] otherColumns, boolean noBottomPadding) {
+        super(DefaultTable.Options.Builder.construct().columnCount(1 + otherColumns.length).build());
+        this.textField = text;
+        this.otherColumns = otherColumns;
+        this.noBottomPadding = noBottomPadding;
         fillTableModel();
         initialize();
     }
@@ -85,7 +127,9 @@ public class TitleLabel extends DefaultTable {
         }
         setRowHeight(0, Theme.TITLE_V_PADDING - 3);
         setRowHeight(1, Theme.TITLE_SIZE + 6);
-        setRowHeight(2, Theme.TITLE_V_PADDING - 3);
+        if (!noBottomPadding) {
+            setRowHeight(2, Theme.TITLE_V_PADDING - 3);
+        }
         for (int i = 0; i < getColumnCount(); i ++) {
             getColumnModel().getColumn(i).setWidth(0);
             getColumnModel().getColumn(i).setMinWidth(0);
@@ -189,7 +233,9 @@ public class TitleLabel extends DefaultTable {
         }
         model.addRow(new Object[] {});
         model.addRow(cells.toArray());
-        model.addRow(new Object[] {});
+        if (!noBottomPadding) {
+            model.addRow(new Object[] {});
+        }
     }
 
     public static class CellRenderer extends DefaultTableCellRenderer {
