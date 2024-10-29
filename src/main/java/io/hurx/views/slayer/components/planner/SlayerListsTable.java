@@ -56,17 +56,24 @@ public class SlayerListsTable extends DefaultTable {
                         return;
                     }
 
+                    // Duplicate option
+                    JMenuItem duplicate = new JMenuItem("Duplicate list");
+                    duplicate.addActionListener(ae -> {
+                        view.duplicateList(list);
+                    });
+                    popupMenu.add(duplicate);
+
                     // Export option
                     JMenuItem export = new JMenuItem("Export list");
                     export.addActionListener(ae -> {
-                        exportSlayerList(list);
+                        view.saveSlayerList(list);
                     });
                     popupMenu.add(export);
 
                     // Reset
                     JMenuItem reset = new JMenuItem("Reset list to defaults");
                     export.addActionListener(ae -> {
-                        resetSlayerList(list);
+                        view.resetDefaultsForList(list);
                     });
                     popupMenu.add(reset);
     
@@ -74,7 +81,7 @@ public class SlayerListsTable extends DefaultTable {
                     if (view.getPanel().getCache().getData().getSlayer().getLists().size() > 1) {
                         JMenuItem delete = new JMenuItem("Delete list");
                         delete.addActionListener(ae -> {
-                            deleteSlayerList(list);
+                            view.deleteList(list);
                         });
                         popupMenu.add(delete);
                     }
@@ -167,18 +174,6 @@ public class SlayerListsTable extends DefaultTable {
                 label
             });
         }
-    }
-
-    private void exportSlayerList(SlayerListData list) {
-        // TODO:
-    }
-
-    private void resetSlayerList(SlayerListData list) {
-        // TODO:
-    }
-
-    private void deleteSlayerList(SlayerListData list) {
-        // TODO:
     }
 
     public static class CellRenderer extends DefaultTableCellRenderer {

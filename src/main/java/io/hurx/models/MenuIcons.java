@@ -6,6 +6,9 @@ public enum MenuIcons {
     Filter("Filters", IconPaths.MenuFilter),
     Settings("Settings", IconPaths.MenuSettings),
     Edit("Edit", IconPaths.MenuEdit),
+    Upload("Import", IconPaths.MenuUpload),
+    Download("Export", IconPaths.MenuDownload),
+    Reset("Reset defaults", IconPaths.MenuReset),
     ;
 
     public String getName() {

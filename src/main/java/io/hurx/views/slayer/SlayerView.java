@@ -33,22 +33,43 @@ import io.hurx.views.slayer.components.planner.planning.SlayerPlanningPercentage
 import io.hurx.views.slayer.components.planner.planning.SlayerPlanningTable;
 import io.hurx.views.slayer.components.planner.planning.SlayerPlanningTopTable;
 
+import javax.swing.JOptionPane;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.LinkedHashMap;
 import java.awt.event.ActionListener;
 import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.util.stream.Collectors;
+import javax.swing.filechooser.FileNameExtensionFilter;
+import java.text.NumberFormat;
+import java.util.Locale;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.FileReader;
+import java.io.IOException;
+
+import javax.swing.JFileChooser;
 import javax.swing.JComboBox;
 import javax.swing.ListCellRenderer;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import javax.swing.JList;
 import javax.swing.JLabel;
 import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.JPopupMenu;
+import javax.swing.JMenuItem;
+
 import java.awt.Color;
+import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.UUID;
 
 /**
  * The slayer view
@@ -68,9 +89,9 @@ public class SlayerView extends View {
     private SlayerOverviewTable overviewTable;
     private SlayerOverviewPercentageTable overviewPercentageTable;
 
-    private TitleLabel plannerListsLabel = new TitleLabel("Slayer lists");
+    private TitleLabel plannerListsLabel;
     private SlayerListsTable plannerListsTable;
-    private TitleLabel plannerLabel = new TitleLabel("Planning");
+    private TitleLabel plannerLabel;
     private List<SlayerPlanningTopTable> plannerTopTables;
     private List<SlayerPlanningTable> plannerTables;
     private List<SlayerPlanningPercentageTable> plannerPercentageTables;
@@ -188,6 +209,43 @@ public class SlayerView extends View {
                 plannerTopTables = new ArrayList<>();
                 plannerTables = new ArrayList<>();
                 plannerPercentageTables = new ArrayList<>();
+                plannerListsLabel = new TitleLabel("Slayer lists", new Component[] {
+                    new MenuButton(MenuIcons.Upload) {
+                        @Override
+                        public void mouseReleased(MouseEvent e) {
+                            loadSlayerList(); 
+                        }
+                    },
+                    new MenuButton(MenuIcons.Add) {
+                        @Override
+                        public void mouseReleased(MouseEvent e) {
+                            SlayerListData list = new SlayerListData();
+                            panel.getCache().getData().getSlayer().getLists().add(list);
+                            panel.getCache().getData().getSlayer().setListUuid(list.getUuid());
+                            panel.getCache().getData().getSlayer().setView(null);
+                            try {
+                                panel.getCache().save();
+                                load();
+                            }
+                            catch (Exception ex) {
+                                ex.printStackTrace();
+                            }
+                        }
+                    }
+                });
+                plannerLabel = new TitleLabel("Planning", new Component[] {
+                    new MenuButton(MenuIcons.Add) {
+                        @Override
+                        public void mouseReleased(MouseEvent e) {
+                            SlayerPlanningData planning = new SlayerPlanningData();
+                            planning.setStartXP(200_000_000);
+                            planning.setListUuid(data.getSlayer().getLists().get(data.getSlayer().getLists().size() - 1).getUuid());
+                            planning.setEndXP(200_000_000);
+                            panel.getCache().getData().getSlayer().getPlannings().add(planning);
+                            updatePlannings();
+                        }
+                    }
+                });
                 panel.add(plannerListsLabel);
                 panel.add(plannerListsTable);
                 panel.add(plannerLabel);
@@ -199,6 +257,25 @@ public class SlayerView extends View {
                     SlayerPlanningTopTable topTable = new SlayerPlanningTopTable(this, planning.getUuid());
                     SlayerPlanningTable planningTable = new SlayerPlanningTable(this, planning.getUuid());
                     SlayerPlanningPercentageTable percentageTable = new SlayerPlanningPercentageTable(this, planning.getUuid());
+                    for (Component component : new Component[] {
+                        topTable, planningTable, percentageTable
+                    }) {
+                        component.addMouseListener(new MouseAdapter() {
+                            @Override
+                            public void mouseReleased(MouseEvent e) {
+                                if (e.getButton() == MouseEvent.BUTTON3) {
+                                    JPopupMenu popupMenu = new JPopupMenu();
+                                    CacheData data = panel.getCache().getData();
+                                    JMenuItem delete = new JMenuItem("Delete planning item");
+                                    delete.addActionListener(ae -> {
+                                        deletePlanning(planning);
+                                    });
+                                    popupMenu.add(delete);
+                                    popupMenu.show(e.getComponent(), e.getX(), e.getY());
+                                }
+                            }
+                        });
+                    }
                     panel.add(topTable);
                     panel.add(planningTable);
                     panel.add(percentageTable);
@@ -209,10 +286,26 @@ public class SlayerView extends View {
             }
         }
         else {
-            listMasterLabel = new TitleLabel(list.getName(), new Component[] {
-                new MenuButton(MenuIcons.Edit) {
+            JTextField text = new JTextField() {
+                @Override
+                public void setText(String text) {
+                    setListName(text);
+                    super.setText(text);
+                }
+            };
+            text.setText(list.getName());
+            text.setBackground(Theme.BG_COLOR);
+            listMasterLabel = new TitleLabel(text, new Component[] {
+                new MenuButton(MenuIcons.Reset) {
+                    @Override
                     public void mouseReleased(MouseEvent e) {
-                        System.out.println("Edit!");
+                        resetDefaultsForList(list);
+                    }
+                },
+                new MenuButton(MenuIcons.Download) {
+                    @Override
+                    public void mouseReleased(MouseEvent e) {
+                        saveSlayerList(list);
                     }
                 }
             });
@@ -673,6 +766,315 @@ public class SlayerView extends View {
                 panel.revalidate();
                 panel.repaint();
             }
+        }
+    }
+
+    public void setListName(String name) {
+        SlayerListData list = panel.getCache().getData().getSlayer().getList();
+        if (list == null) return;
+
+        if (list.getName().equals(name)) return;
+
+        list.setName(name);
+
+        try {
+            panel.getCache().save();
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+        finally {
+            this.load();
+        }
+    }
+
+    public void loadSlayerList() {
+        // Create a JFileChooser instance
+        JFileChooser fileChooser = new JFileChooser();
+
+        // Set a .json filter to show only JSON files in the dialog
+        FileNameExtensionFilter jsonFilter = new FileNameExtensionFilter("JSON files (*.json)", "json");
+        fileChooser.setFileFilter(jsonFilter);
+        
+        // Open the load dialog
+        int userSelection = fileChooser.showOpenDialog(null);
+
+        boolean reload = false;
+
+        // If the user selects a file
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+            ObjectMapper objectMapper = new ObjectMapper();
+            File fileToLoad = fileChooser.getSelectedFile();
+            SlayerListData data;
+
+            String input = "";
+            try (BufferedReader reader = new BufferedReader(new FileReader(fileToLoad))) {
+                input += reader.readLine() + "\n";
+            } catch (IOException e) {
+                JOptionPane.showMessageDialog(null, "Error loading slayer list: " + e.getMessage());
+                e.printStackTrace();
+                return;
+            }
+            try {
+                data = objectMapper.readValue(input, SlayerListData.class);
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(null, "Slayer list is corrupted: " + e.getMessage());
+                return;
+            }
+
+            String uuid = data.getUuid();
+            SlayerListData existingList = panel.getCache().getData().getSlayer().findListByUuid(uuid);
+            if (existingList != null) {
+                int option = JOptionPane.showOptionDialog(
+                    null,
+                    "You are trying to import a slayer list that already exists, would you like to replace the existing slayer list, or duplicate this one into a new slayer list?",
+                    "Slayer list exists",
+                    JOptionPane.YES_NO_CANCEL_OPTION,
+                    JOptionPane.QUESTION_MESSAGE,
+                    null,
+                    new Object[] { "Replace", "Duplicate", "Cancel" },
+                    null
+                );
+                // Replace
+                if (option == JOptionPane.YES_OPTION) {
+                    int index = panel.getCache().getData().getSlayer().getLists().indexOf(existingList);
+                    panel.getCache().getData().getSlayer().getLists().remove(existingList);
+                    panel.getCache().getData().getSlayer().getLists().add(index, data);
+                    reload = true;
+                }
+                // Duplicate
+                else if (option == JOptionPane.NO_OPTION) {
+                    data.setUuid(UUID.randomUUID().toString());
+                    panel.getCache().getData().getSlayer().getLists().add(data);
+                    reload = true;
+                }
+            }
+            // Create new list
+            else {
+                panel.getCache().getData().getSlayer().getLists().add(data);
+                reload = true;
+            }
+        }
+
+        if (reload) {
+            try {
+                panel.getCache().save();
+                load();
+            }
+            catch (Exception ex) {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(null, "Could not load slayer list: " + ex.getMessage());
+            }
+        }
+    }
+
+    public void saveSlayerList(SlayerListData list) {
+        JFileChooser chooser = new JFileChooser();
+        FileNameExtensionFilter jsonFilter = new FileNameExtensionFilter("JSON files (*.json)", "json");
+        chooser.setFileFilter(jsonFilter);
+
+        // Set default file name and extension
+        chooser.setSelectedFile(new File(list.getName() + ".json"));
+
+        int userSelection = chooser.showSaveDialog(null);
+
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+            File fileToSave = chooser.getSelectedFile();
+
+            if (!fileToSave.getName().endsWith(".json")) {
+                fileToSave = new File(fileToSave.getAbsolutePath() + ".json");
+            }
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(fileToSave))) {
+                String jsonString = objectMapper.writeValueAsString(list);
+                writer.write(jsonString);
+            } catch (IOException e) {
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(null, "Error saving slayer list: " + e.getMessage());
+            }
+        }
+    }
+
+    public void resetDefaultsForList(SlayerListData list) {
+        boolean reload = false;
+        int option = JOptionPane.showOptionDialog(
+            null,
+            "Are you sure you wish to reset the slayer list \"" + list.getName() + "\" to default settings? This can not be undone.",
+            "Reset to default settings",
+            JOptionPane.YES_NO_CANCEL_OPTION,
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            new Object[] { "Yes", "No" },
+            null
+        );
+        // Reset
+        if (option == JOptionPane.YES_OPTION) {
+            SlayerListData newList = new SlayerListData();
+            newList.setName(list.getName());
+            newList.setUuid(list.getUuid());
+            int index = panel.getCache().getData().getSlayer().getLists().indexOf(list);
+            panel.getCache().getData().getSlayer().getLists().remove(list);
+            panel.getCache().getData().getSlayer().getLists().add(index == -1 ? 0 : index, newList);
+            reload = true;
+        }
+        // Reload
+        if (reload) {
+            try {
+                panel.getCache().save();
+                load();
+            }
+            catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
+
+    public void deleteList(SlayerListData list) {
+        if (panel.getCache().getData().getSlayer().getLists().size() == 1) return;
+        boolean reload = false;
+        int option = JOptionPane.showOptionDialog(
+            null,
+            "Are you sure you wish to delete the slayer list \"" + list.getName() + "\"? This can not be undone.",
+            "Delete slayer list",
+            JOptionPane.YES_NO_CANCEL_OPTION,
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            new Object[] { "Yes", "No" },
+            null
+        );
+        // Reset
+        if (option == JOptionPane.YES_OPTION) {
+            panel.getCache().getData().getSlayer().getLists().remove(list);
+            for (SlayerPlanningData planning : panel.getCache().getData().getSlayer().getPlannings()) {
+                if (planning.getListUuid().equals(list.getUuid())) {
+                    planning.setListUuid(panel.getCache().getData().getSlayer().getLists().get(panel.getCache().getData().getSlayer().getLists().size() - 1).getUuid());
+                }
+            }
+            reload = true;
+        }
+        // Reload
+        if (reload) {
+            try {
+                panel.getCache().save();
+                load();
+            }
+            catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
+
+    public void duplicateList(SlayerListData list) {
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        String input = "";
+        SlayerListData newList;
+        try {
+            input = objectMapper.writeValueAsString(list);
+        }
+        catch (IOException ex) {
+            ex.printStackTrace();
+            return;
+        }
+        try {
+            newList = objectMapper.readValue(input, SlayerListData.class);
+        }
+        catch (Exception ex) {
+            ex.printStackTrace();
+            return;
+        }
+        newList.setUuid(UUID.randomUUID().toString());
+        panel.getCache().getData().getSlayer().getLists().add(newList);
+        try {
+            panel.getCache().save();
+            load();
+        }
+        catch (Exception ex) {
+            ex.printStackTrace();
+            return;
+        }
+    }
+
+    public void editPlanning(SlayerPlanningData planning, int startXp) {
+        planning.setCreatedAt(System.currentTimeMillis());
+        planning.setStartXP(startXp);
+        updatePlannings();
+    }
+
+    public void deletePlanning(SlayerPlanningData planning) {
+        if (panel.getCache().getData().getSlayer().getPlannings().size() == 1) return;
+        boolean reload = false;
+        int option = JOptionPane.showOptionDialog(
+            null,
+            "Are you sure you wish to delete the planning item starting at: " + NumberFormat.getInstance(Locale.US).format(planning.getStartXP()) + " xp?",
+            "Delete planning item",
+            JOptionPane.YES_NO_CANCEL_OPTION,
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            new Object[] { "Yes", "No" },
+            null
+        );
+        // Reset
+        if (option == JOptionPane.YES_OPTION) {
+            panel.getCache().getData().getSlayer().getPlannings().remove(planning);
+            reload = true;
+        }
+        // Reload
+        if (reload) {
+            updatePlannings();
+        }
+    }
+
+    public void updatePlannings() {
+        CacheData data = panel.getCache().getData();
+        List<SlayerPlanningData> delete = new ArrayList<>();
+        data.getSlayer().getPlannings().sort(new Comparator<SlayerPlanningData>() {
+            @Override
+            public int compare(SlayerPlanningData m1, SlayerPlanningData m2) {
+                int compare1 = Integer.compare(m1.getStartXP(), m2.getStartXP());
+                if (compare1 == 0) {
+                    int compare2 = Long.compare(m2.getCreatedAt(), m1.getCreatedAt());
+                    if (compare2 < 0) {
+                        delete.add(m2);
+                    }
+                    else {
+                        delete.add(m1);
+                    }
+                    return compare2;
+                }
+                return compare1;
+            }
+        });
+        for (SlayerPlanningData d : delete) {
+            data.getSlayer().getPlannings().remove(d);
+        }
+        if (data.getSlayer().getPlannings().get(0).getStartXP() > 0) {
+            SlayerPlanningData planning = new SlayerPlanningData();
+            planning.setStartXP(0);
+            planning.setListUuid(data.getSlayer().getLists().get(data.getSlayer().getLists().size() - 1).getUuid());
+            data.getSlayer().getPlannings().add(0, planning);
+        }
+        for (int i = 0; i < data.getSlayer().getPlannings().size(); i ++) {
+            SlayerPlanningData planning = data.getSlayer().getPlannings().get(i);
+            SlayerPlanningData nextPlanning = i + 1 < data.getSlayer().getPlannings().size()
+                ? data.getSlayer().getPlannings().get(i + 1)
+                : null;
+            if (nextPlanning == null) {
+                planning.setEndXP(200_000_000);
+            }
+            else {
+                planning.setEndXP(nextPlanning.getStartXP());
+            }
+        }
+        try {
+            panel.getCache().save();
+            load();
+        }
+        catch (Exception ex) {
+            ex.printStackTrace();
         }
     }
 

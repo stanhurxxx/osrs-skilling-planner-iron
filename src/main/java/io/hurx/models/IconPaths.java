@@ -171,6 +171,9 @@ public enum IconPaths {
     MenuFilter("icons/menu/filter.png"),
     MenuSettings("icons/menu/settings.png"),
     MenuEdit("icons/menu/edit.png"),
+    MenuUpload("icons/menu/upload.png"),
+    MenuDownload("icons/menu/download.png"),
+    MenuReset("icons/menu/reload.png"),
     ;
 
     public String getPath() {

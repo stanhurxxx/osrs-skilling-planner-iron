@@ -11,6 +11,8 @@ public class SlayerPlanningData {
 
     private int endXP;
 
+    private long createdAt = System.currentTimeMillis();
+
     public void setUuid(String uuid) {
         this.uuid = uuid;
     }
@@ -46,6 +48,14 @@ public class SlayerPlanningData {
     // Setter for endXP
     public void setEndXP(int endXP) {
         this.endXP = endXP;
+    }
+
+    public long getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(long createdAt) {
+        this.createdAt = createdAt;
     }
 
     public SlayerPlanningData() {}

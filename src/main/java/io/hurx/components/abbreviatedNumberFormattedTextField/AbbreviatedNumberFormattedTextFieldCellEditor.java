@@ -88,14 +88,8 @@ public class AbbreviatedNumberFormattedTextFieldCellEditor extends AbstractCellE
 
     @Override
     public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
-        // Set the value in the textField based on the cell's value
-        if (value instanceof AbbreviatedNumberFormattedTextField) {
-            return (AbbreviatedNumberFormattedTextField) value;
-        }
         if (value instanceof Number) {
             textField.setValue(value); // Set the provided numeric value
-        } else {
-            textField.setValue(BigDecimal.ZERO);  // Default to BigDecimal.ZERO for non-numeric values
         }
         return textField; // Return the text field as the editor component
     }

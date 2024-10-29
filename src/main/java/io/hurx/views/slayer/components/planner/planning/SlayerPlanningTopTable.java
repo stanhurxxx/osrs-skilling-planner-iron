@@ -168,7 +168,6 @@ public class SlayerPlanningTopTable extends DefaultTable {
                 return topTable.comboBox;
             }
             else if (value instanceof SlayerListData) {
-                System.out.println(value);
                 topTable.comboBox.setBorder(BorderFactory.createEmptyBorder());
                 topTable.comboBox.setSelectedItem(value);
                 topTable.view.setSelectedList(topTable.getPlanning(), ((SlayerListData)topTable.comboBox.getSelectedItem()).getUuid());

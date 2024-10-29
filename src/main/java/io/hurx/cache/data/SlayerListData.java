@@ -14,7 +14,7 @@ import java.util.UUID;
  */
 public class SlayerListData {
     private String uuid = UUID.randomUUID().toString(); 
-    private String name = "Default slayer list";
+    private String name = "Untitled";
     private SlayerMasters master = SlayerMasters.Duradel;
     private SlayerMonsters[] blocked = new SlayerMonsters[] {};
     private SlayerMonsters[] skipped = new SlayerMonsters[] {};

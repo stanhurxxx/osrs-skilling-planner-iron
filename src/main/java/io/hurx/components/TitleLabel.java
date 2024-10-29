@@ -6,9 +6,14 @@ import io.hurx.Theme;
 import io.hurx.components.menuButton.MenuButton;
 import io.hurx.components.menuButton.MenuButtonCellEditor;
 import io.hurx.components.table.defaultTable.DefaultTable;
+import io.hurx.components.textField.TextFieldCellEditor;
+
 import javax.swing.table.DefaultTableModel;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.EventObject;
+import java.awt.event.MouseEvent;
+
 import javax.swing.table.DefaultTableCellRenderer;
 
 public class TitleLabel extends DefaultTable {
@@ -20,10 +25,9 @@ public class TitleLabel extends DefaultTable {
         return label;
     }
 
-    /**
-     * The embedded label
-     */
     private JLabel label;
+
+    private JTextField textField;
 
     /**
      * The other columns
@@ -52,11 +56,33 @@ public class TitleLabel extends DefaultTable {
         initialize();
     }
 
+    public TitleLabel(JTextField text) {
+        super(DefaultTable.Options.Builder.construct().columnCount(1).build());
+        this.textField = text;
+        this.otherColumns = new Component[] {};
+        fillTableModel();
+        initialize();
+    }
+
+    public TitleLabel(JTextField text, Component[] otherColumns) {
+        super(DefaultTable.Options.Builder.construct().columnCount(1 + otherColumns.length).build());
+        this.textField = text;
+        this.otherColumns = otherColumns;
+        fillTableModel();
+        initialize();
+    }
+
     public void initialize() {
         this.setBorder(BorderFactory.createEmptyBorder(Theme.TITLE_V_PADDING, Theme.TITLE_H_PADDING, Theme.TITLE_V_PADDING, 0));
         this.setFont(new Font("Arial", Font.BOLD, Theme.TITLE_SIZE));
-        this.label.setFont(new Font("Arial", Font.BOLD, Theme.TITLE_SIZE));
-        this.label.setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 0));
+        if (this.label != null) {
+            this.label.setFont(new Font("Arial", Font.BOLD, Theme.TITLE_SIZE));
+            this.label.setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 0));
+        }
+        else if (this.textField != null) {
+            this.textField.setFont(new Font("Arial", Font.BOLD, Theme.TITLE_SIZE));
+            this.textField.setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 0));
+        }
         setRowHeight(0, Theme.TITLE_V_PADDING - 3);
         setRowHeight(1, Theme.TITLE_SIZE + 6);
         setRowHeight(2, Theme.TITLE_V_PADDING - 3);
@@ -96,21 +122,51 @@ public class TitleLabel extends DefaultTable {
             });
         }
         else {
+            int hPadding = 10;
             getColumnModel().getColumn(0).setWidth((int)Math.round(223 - (otherColumns.length * (Theme.TITLE_SIZE))));
             getColumnModel().getColumn(0).setMinWidth((int)Math.round(223 - (otherColumns.length * (Theme.TITLE_SIZE))));
             getColumnModel().getColumn(0).setMaxWidth((int)Math.round(223 - (otherColumns.length * (Theme.TITLE_SIZE))));
             getColumnModel().getColumn(0).setPreferredWidth((int)Math.round(223 - (otherColumns.length * (Theme.TITLE_SIZE))));
             for (int i = 0; i < otherColumns.length; i ++) {
-                getColumnModel().getColumn(i + 1).setWidth(Theme.TITLE_SIZE);
-                getColumnModel().getColumn(i + 1).setMinWidth(Theme.TITLE_SIZE);
-                getColumnModel().getColumn(i + 1).setMaxWidth(Theme.TITLE_SIZE);
-                getColumnModel().getColumn(i + 1).setPreferredWidth(Theme.TITLE_SIZE);
+                getColumnModel().getColumn(i + 1).setWidth(Theme.TITLE_SIZE + hPadding);
+                getColumnModel().getColumn(i + 1).setMinWidth(Theme.TITLE_SIZE + hPadding);
+                getColumnModel().getColumn(i + 1).setMaxWidth(Theme.TITLE_SIZE + hPadding);
+                getColumnModel().getColumn(i + 1).setPreferredWidth(Theme.TITLE_SIZE + hPadding);
                 if (otherColumns[i] instanceof MenuButton) {
+                    ((MenuButton)otherColumns[i]).setBackground(Theme.TABLE_BG_COLOR_HOVER);
+                    ((MenuButton)otherColumns[i]).setVPadding(4);
+                    ((MenuButton)otherColumns[i]).setHPadding((int)Math.round(hPadding / 2));
                     MenuButtonCellEditor cellEditor = new MenuButtonCellEditor();
                     cellEditor.setButton((MenuButton)otherColumns[i]);
-                    getColumnModel().getColumn(i + 1).setCellEditor(cellEditor);      
+                    getColumnModel().getColumn(i + 1).setCellEditor(cellEditor);
                 }
             }
+        }
+        if (textField != null) {
+            TextFieldCellEditor editor = new TextFieldCellEditor(textField) {
+                @Override
+                public boolean isCellEditable(EventObject e) {
+                    if (e instanceof MouseEvent) {
+                        MouseEvent mouseEvent = (MouseEvent) e;
+                        JTable table = (JTable) mouseEvent.getSource();
+                        int row = table.rowAtPoint(mouseEvent.getPoint());
+                        return row == 1;  // Only allow editing on row 1
+                    }
+                    return false;
+                }
+
+                @Override
+                public boolean stopCellEditing() {
+                    if (textField.getText().trim().equals("")) {
+                        textField.setText("Untitled");
+                    }
+                    else {
+                        textField.setText(textField.getText().trim());
+                    }
+                    return super.stopCellEditing();
+                }
+            };
+            getColumnModel().getColumn(0).setCellEditor(editor);
         }
     }
 
@@ -122,7 +178,12 @@ public class TitleLabel extends DefaultTable {
             getColumnModel().getColumn(i).setCellRenderer(new CellRenderer());
         }
         List<Object> cells = new ArrayList<>();
-        cells.add(label);
+        if (label != null) {
+            cells.add(label);
+        }
+        else {
+            cells.add(textField);
+        }
         for (int i = 0; i < otherColumns.length; i ++) {
             cells.add(otherColumns[i]);
         }
@@ -153,8 +214,16 @@ public class TitleLabel extends DefaultTable {
                 box.setSelectedItem(value);
                 return box;
             }
+            else if (value instanceof JTextField) {
+                JTextField text = (JTextField) value;
+                return text;
+            }
             else if (value instanceof Component) {
                 return (Component)value;
+            }
+            else if (value instanceof String && title.textField != null) {
+                title.textField.setText((String)value);
+                return title.textField;
             }
             return null;
         }

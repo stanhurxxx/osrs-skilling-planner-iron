@@ -104,9 +104,17 @@ public class SlayerData {
 
     public SlayerListData findListByUuid(String uuid) {
         for (SlayerListData list : lists) {
-            System.out.println("List uuid: " + list.getUuid());
             if (list.getUuid().equals(uuid)) {
                 return list;
+            }
+        }
+        return null;
+    }
+
+    public SlayerPlanningData findPlanningByUuid(String uuid) {
+        for (SlayerPlanningData planning : plannings) {
+            if (planning.getUuid().equals(uuid)) {
+                return planning;
             }
         }
         return null;
