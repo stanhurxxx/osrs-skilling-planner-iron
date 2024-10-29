@@ -3,6 +3,7 @@ package io.hurx.components.numberSlider;
 import javax.swing.*;
 import java.awt.*;
 import javax.swing.table.TableCellEditor;
+
 import java.util.EventObject;
 import java.util.List;
 import java.util.ArrayList;

@@ -8,8 +8,6 @@ import io.hurx.SkillingPlannerPlugin;
 import io.hurx.cache.data.CacheData;
 import io.hurx.cache.exceptions.CacheCorruptedException;
 import io.hurx.cache.exceptions.PlayerNotFoundException;
-import net.runelite.api.Player;
-import net.runelite.client.RuneLite;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -79,7 +77,6 @@ public class Cache {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            System.out.println("Cache saved.");
         }
         catch (JsonProcessingException e) {
             e.printStackTrace();
@@ -110,7 +107,6 @@ public class Cache {
             }
             try {
                 data = objectMapper.readValue(input, CacheData.class);
-                System.out.println("Cache loaded.");
             }
             catch (Exception e) {
                 e.printStackTrace();

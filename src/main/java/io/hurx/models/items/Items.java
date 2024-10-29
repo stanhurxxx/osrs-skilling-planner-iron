@@ -86,6 +86,10 @@ public enum Items {
     BucketOfSand(Item.Builder.id(1783).build()),
     GoldOre(Item.Builder.id(444).build()),
 
+    // Slayer
+    BraceletOfSlaughter(Item.Builder.id(21183).build()),
+    ExpeditiousBracelet(Item.Builder.id(21177).build()),
+
     // Cooking
     Grapes(Item.Builder.id(1987).build()),
 

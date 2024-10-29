@@ -1,19 +1,18 @@
 package io.hurx.models.slayer.masters;
 
+import io.hurx.models.IconPaths;
+
 public enum SlayerMasters {
-    Duradel("Duradel", new Duradel()),
-    Nieve("Nieve", new Nieve());
+    Duradel("Duradel", new Duradel(), IconPaths.NPCDuradel),
+    Nieve("Nieve", new Nieve(), IconPaths.NPCNieve);
+
+    // Getter method to access the string value
+    public String getName() {
+        return name;
+    }
 
     // A field to store the string value
-    private final String displayName;
-
-    private final SlayerMaster master;
-
-    // Constructor for the enum
-    SlayerMasters(String displayName, SlayerMaster master) {
-        this.displayName = displayName;
-        this.master = master;
-    }
+    private final String name;
 
     /**
      * The slayer master
@@ -23,13 +22,23 @@ public enum SlayerMasters {
         return master;
     }
 
-    // Getter method to access the string value
-    public String getDisplayName() {
-        return displayName;
+    private final SlayerMaster master;
+
+    public IconPaths getIconPath() {
+        return iconPath;
+    }
+
+    private final IconPaths iconPath;
+
+    // Constructor for the enum
+    SlayerMasters(String displayName, SlayerMaster master, IconPaths iconPath) {
+        this.name = displayName;
+        this.master = master;
+        this.iconPath = iconPath;
     }
 
     @Override
     public String toString() {
-        return displayName; // Override toString to return the string value
+        return name; // Override toString to return the string value
     }
 }

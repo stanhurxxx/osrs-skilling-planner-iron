@@ -119,6 +119,9 @@ public class SkillingPlannerPlugin extends Plugin
 	@Subscribe
 	public void onGameStateChanged(GameStateChanged gameStateChanged) throws Exception
 	{
+		if (this.panel == null) {
+			return;
+		}
 		if (gameStateChanged.getGameState() == GameState.LOGGED_IN) {
 			clientThread.invoke(() -> {
 				updateItems();
@@ -177,7 +180,7 @@ public class SkillingPlannerPlugin extends Plugin
 	private void loadCache() throws PlayerNotFoundException {
 		try {
 			panel.getCache().load();
-			panel.getRouter().navigate(panel.getCache().getData().view);
+			panel.getRouter().navigate(panel.getCache().getData().getView());
 		}
 		catch (PlayerNotFoundException e) {
 			panel.getRouter().navigate(ViewNames.LoggedOut);

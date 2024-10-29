@@ -38,14 +38,20 @@ public enum CombatStyle {
     ShadowBarrage("Shadow barrage", IconPaths.CombatStyleShadowBarrage),
     ShadowBarrageDefensive("Shadow barrage (defensive)", IconPaths.CombatStyleShadowBarrageDefensive);
 
-    public static List<CombatStyle> melee = List.of(new CombatStyle[] {
+    public static List<CombatStyle> getMeleeStyles() {
+        return melee;
+    }
+    private static List<CombatStyle> melee = List.of(new CombatStyle[] {
         CombatStyle.Controlled,
         CombatStyle.Attack,
         CombatStyle.Strength,
         CombatStyle.Defence
     });
 
-    public static List<CombatStyle> ranged = List.of(new CombatStyle[] {
+    public static List<CombatStyle> getRangedStyles() {
+        return ranged;
+    }
+    private static List<CombatStyle> ranged = List.of(new CombatStyle[] {
         CombatStyle.Ranged,
         CombatStyle.RangedDefensive,
         CombatStyle.RegChinsShort,
@@ -59,7 +65,10 @@ public enum CombatStyle {
         CombatStyle.BlackChinsLong,
     });
 
-    public static List<CombatStyle> magic = List.of(new CombatStyle[] {
+    public static List<CombatStyle> getMagicStyles() {
+        return magic;
+    }
+    private static List<CombatStyle> magic = List.of(new CombatStyle[] {
         CombatStyle.Magic,
         CombatStyle.IceBurst,
         CombatStyle.IceBurstDefensive,

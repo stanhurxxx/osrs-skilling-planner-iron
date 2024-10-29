@@ -17,8 +17,9 @@ import javax.swing.table.*;
 import java.awt.*;
 import java.text.NumberFormat;
 import java.util.Locale;
+import io.hurx.components.table.defaultTable.DefaultTable;
 
-public class LootTable extends JTable {
+public class LootTable extends DefaultTable {
     public final static int ICONS_PER_ROW = 5;
     public final static int H_PADDING = 10;
     public final static int V_PADDING = 10;
@@ -52,7 +53,7 @@ public class LootTable extends JTable {
     private List<Icon> icons;
 
     public LootTable(View view) {
-        super(new DefaultTableModel());
+        super(DefaultTable.Options.Builder.construct().columnCount(ICONS_PER_ROW).build());
         this.view = view;
         this.panel = view.getPanel();
         LootTable table = this;

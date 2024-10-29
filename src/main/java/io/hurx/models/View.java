@@ -6,10 +6,14 @@ import io.hurx.SkillingPlannerPanel;
  * A view in the panel
  */
 public abstract class View {
+    public ViewNames getViewName() {
+        return viewName;
+    }
+    
     /**
      * The view
      */
-    public final ViewNames viewName;
+    private final ViewNames viewName;
 
     /**
      * The skilling planner panel

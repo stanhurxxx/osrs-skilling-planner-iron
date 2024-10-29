@@ -57,14 +57,13 @@ public class Router extends JPanel {
      * @throws PlayerNotFoundException
      */
     public void navigate(ViewNames view) {
-        System.out.println(view);
         try {
             View v = null;
             if (this.view != null) {
                 this.view.cleanUp();
             }
             for (View vv : views) {
-                if (vv.viewName == view) {
+                if (vv.getViewName() == view) {
                     this.view = vv;
                     vv.load();
                     v = vv;
@@ -72,8 +71,8 @@ public class Router extends JPanel {
                     panel.repaint();
                 }
             }
-            if (this.view.viewName != ViewNames.LoggedOut) {
-                panel.getCache().getData().view = this.view.viewName;
+            if (this.view.getViewName() != ViewNames.LoggedOut) {
+                panel.getCache().getData().setView(this.view.getViewName());
                 if (panel.getCache().getFileName() != null) {
                     panel.getCache().save();
                 }

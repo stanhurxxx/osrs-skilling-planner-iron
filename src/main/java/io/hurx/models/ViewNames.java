@@ -4,28 +4,50 @@ package io.hurx.models;
  * All the views
  */
 public enum ViewNames {
-    Overview("Overview"),
-    Slayer("Slayer"),
-    Skills("Skills"),
-    ProfitLoss("Profit/loss"),
-    Hourlies("Hourlies"),
-    LoggedOut("Logged out");
+    Overview("Overview", IconPaths.SkillOverall),
+    Agility("Agility", IconPaths.SkillAgility),
+    Attack("Attack", IconPaths.SkillAttack),
+    Construction("Construction", IconPaths.SkillConstruction),
+    Cooking("Cooking", IconPaths.SkillCooking),
+    Crafting("Crafting", IconPaths.SkillCrafting),
+    Defence("Defence", IconPaths.SkillDefence),
+    Farming("Farming", IconPaths.SkillFarming),
+    Firemaking("Firemaking", IconPaths.SkillFiremaking),
+    Fishing("Fishing", IconPaths.SkillFishing),
+    Fletching("Fletching", IconPaths.SkillFletching),
+    Herblore("Herblore", IconPaths.SkillHerblore),
+    Hitpoints("Hitpoints", IconPaths.SkillHitpoints),
+    Hunter("Hunter", IconPaths.SkillHunter),
+    Magic("Magic", IconPaths.SkillMagic),
+    Mining("Mining", IconPaths.SkillMining),
+    Prayer("Prayer", IconPaths.SkillPrayer),
+    Ranged("Ranged", IconPaths.SkillRanged),
+    Runecraft("Runecraft", IconPaths.SkillRunecraft),
+    Slayer("Slayer", IconPaths.SkillSlayer),
+    Smithing("Smithing", IconPaths.SkillSmithing),
+    Strength("Strength", IconPaths.SkillStrength),
+    Thieving("Thieving", IconPaths.SkillThieving),
+    Woodcutting("Woodcutting", IconPaths.SkillWoodcutting),
+    LoggedOut("Woodcutting", IconPaths.SkillEHP),
+    ;
 
-    // A field to store the string value
-    private final String displayName;
-
-    // Constructor for the enum
-    ViewNames(String displayName) {
-        this.displayName = displayName;
+    public String getName() {
+        return name;
     }
+    private final String name;
 
-    // Getter method to access the string value
-    public String getDisplayName() {
-        return displayName;
+    public IconPaths getIconPath() {
+        return iconPath;
+    }
+    private final IconPaths iconPath;
+
+    ViewNames(String displayName, IconPaths iconPath) {
+        this.name = displayName;
+        this.iconPath = iconPath;
     }
 
     @Override
     public String toString() {
-        return displayName; // Override toString to return the string value
+        return name;
     }
 }

@@ -1,30 +1,54 @@
 package io.hurx.views.slayer;
 
+import io.hurx.Resources;
 import io.hurx.SkillingPlannerPanel;
 import io.hurx.Theme;
 import io.hurx.cache.data.CacheData;
+import io.hurx.cache.data.SlayerListData;
+import io.hurx.cache.data.SlayerPlanningData;
 import io.hurx.components.LootTable;
+import io.hurx.components.menuButton.MenuButton;
+import io.hurx.components.MultiComboBox;
+import io.hurx.components.Padding;
 import io.hurx.components.PlainLabel;
 import io.hurx.components.TitleLabel;
 import io.hurx.models.CombatStyle;
+import io.hurx.models.IconPaths;
+import io.hurx.models.MenuIcons;
 import io.hurx.models.View;
 import io.hurx.models.ViewNames;
-import io.hurx.models.items.Items;
 import io.hurx.models.slayer.SlayerAssignment;
 import io.hurx.models.slayer.masters.SlayerMasters;
 import io.hurx.models.slayer.monsters.Monsters;
 import io.hurx.models.slayer.monsters.SlayerMonsters;
 import io.hurx.views.slayer.components.MasterTable;
 import io.hurx.views.slayer.components.targetXP.TargetXPTable;
-import io.hurx.views.slayer.components.tasks.TasksTable;
-import io.hurx.views.slayer.components.tasks.title.TasksTitleTable;
-import io.hurx.views.slayer.components.variants.CombatStyleTable;
-import io.hurx.views.slayer.components.variants.VariantTable;
+import io.hurx.views.slayer.components.list.tasks.TasksTable;
+import io.hurx.views.slayer.components.list.variants.CombatStyleTable;
+import io.hurx.views.slayer.components.list.variants.VariantTable;
+import io.hurx.views.slayer.components.overview.SlayerOverviewPercentageTable;
+import io.hurx.views.slayer.components.overview.SlayerOverviewTable;
+import io.hurx.views.slayer.components.planner.SlayerListsTable;
+import io.hurx.views.slayer.components.planner.planning.SlayerPlanningPercentageTable;
+import io.hurx.views.slayer.components.planner.planning.SlayerPlanningTable;
+import io.hurx.views.slayer.components.planner.planning.SlayerPlanningTopTable;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.LinkedHashMap;
+import java.awt.event.ActionListener;
+import java.awt.Component;
+import java.awt.event.ActionEvent;
 import java.util.stream.Collectors;
+
+import javax.swing.JComboBox;
+import javax.swing.ListCellRenderer;
+import javax.swing.JList;
+import javax.swing.JLabel;
+import javax.swing.JTable;
+import java.awt.Color;
+import java.awt.event.MouseEvent;
 
 /**
  * The slayer view
@@ -35,81 +59,202 @@ public class SlayerView extends View {
      * @return
      */
     public SlayerAssignment[] getSlayerAssignments() {
-        SlayerMasters master = panel.getCache().getData().slayerMaster;
-        return master.getMaster().getAssignments();
+        SlayerListData list = panel.getCache().getData().getSlayer().getList();
+        if (list == null) return new SlayerAssignment[] {};
+        return list.getMaster().getMaster().getAssignments();
     }
 
-    private TitleLabel masterLabel = new TitleLabel("Slayer master");
-    
-    private MasterTable masterTable;
+    private TitleLabel overviewLabel = new TitleLabel("Slayer overview");
+    private SlayerOverviewTable overviewTable;
+    private SlayerOverviewPercentageTable overviewPercentageTable;
 
-    private TasksTitleTable tasksTitleTable;
+    private TitleLabel plannerListsLabel = new TitleLabel("Slayer lists");
+    private SlayerListsTable plannerListsTable;
+    private TitleLabel plannerLabel = new TitleLabel("Planning");
+    private List<SlayerPlanningTopTable> plannerTopTables;
+    private List<SlayerPlanningTable> plannerTables;
+    private List<SlayerPlanningPercentageTable> plannerPercentageTables;
 
-    private TasksTable tasksTable;
-
-    private VariantTable variantTable;
-    
-    private PlainLabel variantXpDistributionLabel = new PlainLabel("Rates");
-    
-    private PlainLabel variantCompletionTimeLabel = new PlainLabel("Completion time");
-    
-    private CombatStyleTable variantCombatStyleTable;
+    private TitleLabel listMasterLabel;
+    private MasterTable listMasterTable;
+    private TitleLabel listTasksTitleLabel;
+    private TasksTable listTasksTable;
+    private VariantTable listVariantTable;
+    private PlainLabel listVariantXpDistributionLabel = new PlainLabel("Rates");
+    private PlainLabel listVariantCompletionTimeLabel = new PlainLabel("Completion time");
+    private CombatStyleTable listVariantCombatStyleTable;
     
     private TitleLabel targetXPLabel = new TitleLabel("Target XP");
-    
     private TargetXPTable targetXPTable;
-
     private TitleLabel alchLootLabel = new TitleLabel("Alch loot"); 
-
     private LootTable alchLootTable;
-
     private TitleLabel dropTradeLootLabel = new TitleLabel("Drop trade loot");
-    
     private LootTable dropTradeLootTable;
-
     private TitleLabel suppliesLabel = new TitleLabel("Supplies");
-    
     private PlainLabel suppliesGainedLabel = new PlainLabel("Gained");
-    
     private LootTable suppliesGainedLootTable;
-
     private PlainLabel suppliesCostLabel = new PlainLabel("Cost");
-
     private LootTable suppliesCostLootTable;
 
     public SlayerView(SkillingPlannerPanel panel) {
-        super(ViewNames.Slayer, panel);        
-        panel.setOpaque(true);
-        panel.setBackground(Theme.BG_COLOR);
-        panel.setDoubleBuffered(true);
+        super(ViewNames.Slayer, panel);
     }
 
     @Override
     public void load() {
         panel.removeAll();
 
-        masterTable = new MasterTable(this);
-        tasksTitleTable = new TasksTitleTable(this);
-        tasksTable = new TasksTable(this);
-        variantTable = new VariantTable(this);
-        variantCombatStyleTable = new CombatStyleTable(this);
-        targetXPTable = new TargetXPTable(this);
-        alchLootTable = new LootTable(this);
-        dropTradeLootTable = new LootTable(this);
-        suppliesGainedLootTable = new LootTable(this);
-        suppliesCostLootTable = new LootTable(this);
+        CacheData data = panel.getCache().getData();
+        SlayerListData list = data.getSlayer().getList();
 
-        panel.add(panel.createSelect());
-        
-        panel.add(masterLabel);
-        panel.add(masterTable);
+        panel.add(new MultiComboBox(new JComboBox<?>[] {
+            panel.createPagesComboBox(),
+            createListComboBox()
+        }) {
+            @Override
+            public void fillTableModel() {
+                super.fillTableModel();
+                for (int i = 0; i < this.options.getColumnCount(); i ++) {
+                    getColumnModel().getColumn(i).setCellRenderer(new CellRenderer());
+                }
+            }
 
-        panel.add(tasksTitleTable);
+            class CellRenderer extends MultiComboBox.CellRenderer {
+                @Override
+                public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                    MultiComboBox thisTable = (MultiComboBox)table;
+                    if (value instanceof SlayerListData) {
+                        JComboBox<?> box = thisTable.getControls()[column];
+                        for (int i = 0; i < box.getItemCount(); i ++) {
+                            ComboBoxModel model = (ComboBoxModel)box.getItemAt(i);
+                            if (model.list == value) {
+                                box.setSelectedItem(model);
+                            }
+                        }
+                        return box;
+                    }
+                    else if (value instanceof SlayerViewNames) {
+                        JComboBox<?> box = thisTable.getControls()[column];
+                        for (int i = 0; i < box.getItemCount(); i ++) {
+                            ComboBoxModel model = (ComboBoxModel)box.getItemAt(i);
+                            if (model.view == value) {
+                                box.setSelectedItem(model);
+                            }
+                        }
+                        return box;
+                    }
+                    else if (value instanceof ViewNames) {
+                        JComboBox<?> box = thisTable.getControls()[column];
+                        for (int i = 0; i < box.getItemCount(); i ++) {
+                            ViewNames view = (ViewNames)box.getItemAt(i);
+                            if (view == value) {
+                                box.setSelectedItem(view);
+                            }
+                        }
+                        return box;
+                    }
+                    return super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                }
+            }
+        });
 
-        SlayerMonsters monster = panel.getCache().getData().slayerSelectedMonster;
-        Monsters variant = panel.getCache().getData().slayerSelectedVariant;
-        setSelectedMonster(monster);
-        if (variant != null) setSelectedVariant(variant);
+        if (list == null) {
+            if (data.getSlayer().getView() == SlayerViewNames.Overview) {
+                overviewTable = new SlayerOverviewTable(this);
+                overviewPercentageTable = new SlayerOverviewPercentageTable(50);
+                targetXPTable = new TargetXPTable(this);
+                alchLootTable = new LootTable(this);
+                dropTradeLootTable = new LootTable(this);
+                suppliesGainedLootTable = new LootTable(this);
+                suppliesCostLootTable = new LootTable(this);
+                panel.add(overviewLabel);
+                panel.add(overviewTable);
+                panel.add(overviewPercentageTable);
+                panel.add(targetXPLabel);
+                panel.add(targetXPTable);
+                panel.add(alchLootLabel);
+                panel.add(alchLootTable);
+                panel.add(dropTradeLootLabel);
+                panel.add(dropTradeLootTable);
+                panel.add(suppliesLabel);
+                panel.add(suppliesGainedLabel);
+                panel.add(suppliesGainedLootTable);
+                panel.add(suppliesCostLabel);
+                panel.add(suppliesCostLootTable);
+            }
+            else if (data.getSlayer().getView() == SlayerViewNames.Planner) {
+                // TODO:
+                plannerListsTable = new SlayerListsTable(this);
+                plannerTopTables = new ArrayList<>();
+                plannerTables = new ArrayList<>();
+                plannerPercentageTables = new ArrayList<>();
+                panel.add(plannerListsLabel);
+                panel.add(plannerListsTable);
+                panel.add(plannerLabel);
+                for (int i = 0; i < data.getSlayer().getPlannings().size(); i ++) {
+                    SlayerPlanningData planning = data.getSlayer().getPlannings().get(i);
+                    if (i > 0) {
+                        panel.add(new Padding());
+                    }
+                    SlayerPlanningTopTable topTable = new SlayerPlanningTopTable(this, planning.getUuid());
+                    SlayerPlanningTable planningTable = new SlayerPlanningTable(this, planning.getUuid());
+                    SlayerPlanningPercentageTable percentageTable = new SlayerPlanningPercentageTable(this, planning.getUuid());
+                    panel.add(topTable);
+                    panel.add(planningTable);
+                    panel.add(percentageTable);
+                    plannerTopTables.add(topTable);
+                    plannerTables.add(planningTable);
+                    plannerPercentageTables.add(percentageTable);
+                }
+            }
+        }
+        else {
+            listMasterLabel = new TitleLabel(list.getName(), new Component[] {
+                new MenuButton(MenuIcons.Edit) {
+                    public void mouseReleased(MouseEvent e) {
+                        System.out.println("Edit!");
+                    }
+                }
+            });
+            
+            listMasterTable = new MasterTable(this);
+            listTasksTitleLabel = new TitleLabel("Tasks", new Component[] {
+                createListTasksComboBox()
+            }) {
+                @Override
+                public void initialize() {
+                    super.initialize();
+                    int labelWidth = 67;
+                    getColumnModel().getColumn(0).setMinWidth(labelWidth);
+                    getColumnModel().getColumn(0).setMaxWidth(labelWidth);
+                    getColumnModel().getColumn(0).setWidth(labelWidth);
+                    getColumnModel().getColumn(0).setPreferredWidth(labelWidth);
+
+                    getColumnModel().getColumn(1).setMinWidth(223 - labelWidth);
+                    getColumnModel().getColumn(1).setMaxWidth(223 - labelWidth);
+                    getColumnModel().getColumn(1).setWidth(223 - labelWidth);
+                    getColumnModel().getColumn(1).setPreferredWidth(223 - labelWidth);
+                }
+            };
+            listTasksTable = new TasksTable(this);
+            listVariantTable = new VariantTable(this);
+            listVariantCombatStyleTable = new CombatStyleTable(this);
+            targetXPTable = new TargetXPTable(this);
+            alchLootTable = new LootTable(this);
+            dropTradeLootTable = new LootTable(this);
+            suppliesGainedLootTable = new LootTable(this);
+            suppliesCostLootTable = new LootTable(this);
+
+            panel.add(listMasterLabel);
+            panel.add(listMasterTable);
+    
+            panel.add(listTasksTitleLabel);
+
+            SlayerMonsters monster = list.getSelectedMonster();
+            Monsters variant = list.getSelectedVariant();
+            setSelectedMonster(monster);
+            if (variant != null) setSelectedVariant(variant);
+        }
     }
 
     /**
@@ -117,9 +262,12 @@ public class SlayerView extends View {
      * @param master the master
      */
     public void setSlayerMaster(SlayerMasters master) {
-        SlayerMasters currentMaster = panel.getCache().getData().slayerMaster;
+        SlayerListData list = panel.getCache().getData().getSlayer().getList();
+        SlayerMasters currentMaster = list.getMaster();
         if (master == currentMaster) return;
-        panel.getCache().getData().slayerMaster = master;
+        if (list == null) return;
+        
+        list.setMaster(master);
         try {
             panel.getCache().save();
         }
@@ -128,9 +276,9 @@ public class SlayerView extends View {
         }
         finally {
             this.setSelectedMonster(null);
-            tasksTable.fillTableModel();
-            tasksTable.revalidate();
-            tasksTable.repaint();
+            listTasksTable.fillTableModel();
+            listTasksTable.revalidate();
+            listTasksTable.repaint();
         }
     }
 
@@ -140,10 +288,15 @@ public class SlayerView extends View {
      */
     public void setSelectedMonster(SlayerMonsters monster) {
         CacheData data = panel.getCache().getData();
-        data.slayerSelectedMonster = monster;
-        data.slayerSelectedVariant = monster == null
+        SlayerListData list = data.getSlayer().getList();
+        if (list == null) return;
+
+        list.setSelectedMonster(monster);
+        list.setSelectedVariant(
+            monster == null
             ? null
-            : monster.getMonsters()[0];
+            : monster.getMonsters()[0]
+        );
         try {
             panel.getCache().save();   
         }
@@ -151,27 +304,31 @@ public class SlayerView extends View {
             e.printStackTrace();
         }
         finally {
-            tasksTitleTable.onSetSelectedMonster();
+            listTasksTitleLabel.setOtherColumns(new Component[] {
+                createListTasksComboBox()
+            });
+            listTasksTitleLabel.revalidate();
+            listTasksTitleLabel.repaint();
             if (monster == null) {
                 for (int i = panel.getComponentCount() - 1; i >= 4; i --) {
                     panel.remove(i);
                 }
-                panel.add(tasksTable, 4);
+                panel.add(listTasksTable, 4);
             }
             else {
                 for (int i = panel.getComponentCount() - 1; i >= 4; i --) {
                     panel.remove(i);
                 }
-                panel.add(variantTable, 4);
-                if (data.slayerSelectedVariant.getStats().getSlayer() == null) {
-                    panel.add(variantXpDistributionLabel);
+                panel.add(listVariantTable, 4);
+                if (list.getSelectedVariant().getStats().getSlayer() == null) {
+                    panel.add(listVariantXpDistributionLabel);
                 }
                 else {
-                    panel.add(variantCompletionTimeLabel);
+                    panel.add(listVariantCompletionTimeLabel);
                 }
-                panel.add(variantCombatStyleTable);
-                variantTable.fillTableModel();
-                variantCombatStyleTable.fillTableModel();
+                panel.add(listVariantCombatStyleTable);
+                listVariantTable.fillTableModel();
+                listVariantCombatStyleTable.fillTableModel();
             }
             panel.add(targetXPLabel);
             panel.add(targetXPTable);
@@ -194,10 +351,12 @@ public class SlayerView extends View {
 
     public void setSelectedVariant(Monsters variant) {
         CacheData data = panel.getCache().getData();
-        if (data.slayerSelectedMonster == null) return;
+        SlayerListData list = data.getSlayer().getList();
+        if (list == null) return;
+        if (list.getSelectedMonster() == null) return;
         if (variant == null) return;
         try {
-            data.slayerSelectedVariant = variant;
+            list.setSelectedVariant(variant);
             panel.getCache().save();
         }
         catch (Exception e) {
@@ -207,21 +366,21 @@ public class SlayerView extends View {
             // Change the label
             this.panel.remove(5);
             if (variant.getStats().getSlayer() == null) {
-                this.panel.add(variantXpDistributionLabel, 5);
+                this.panel.add(listVariantXpDistributionLabel, 5);
             }
             else {
-                this.panel.add(variantCompletionTimeLabel, 5);
+                this.panel.add(listVariantCompletionTimeLabel, 5);
             }
 
             // Reload the view
-            int variantCombatStyleTableIndex = List.of(this.panel.getComponents()).indexOf(this.variantCombatStyleTable);
+            int variantCombatStyleTableIndex = List.of(this.panel.getComponents()).indexOf(this.listVariantCombatStyleTable);
             if (variantCombatStyleTableIndex == -1) return;
-            this.panel.remove(this.variantCombatStyleTable);
-            this.variantCombatStyleTable = new CombatStyleTable(this);
-            this.panel.add(this.variantCombatStyleTable, variantCombatStyleTableIndex);
-            this.variantCombatStyleTable.fillTableModel();
-            this.variantCombatStyleTable.revalidate();
-            this.variantCombatStyleTable.repaint();
+            this.panel.remove(this.listVariantCombatStyleTable);
+            this.listVariantCombatStyleTable = new CombatStyleTable(this);
+            this.panel.add(this.listVariantCombatStyleTable, variantCombatStyleTableIndex);
+            this.listVariantCombatStyleTable.fillTableModel();
+            this.listVariantCombatStyleTable.revalidate();
+            this.listVariantCombatStyleTable.repaint();
 
             panel.revalidate();
             panel.repaint();
@@ -230,23 +389,26 @@ public class SlayerView extends View {
 
     public void setCombatStyleForVariant(CombatStyle combatStyle) {
         CacheData data = panel.getCache().getData();
-        Monsters variant = data.slayerSelectedVariant;
+        SlayerListData list = data.getSlayer().getList();
+        if (list == null) return;
+
+        Monsters variant = list.getSelectedVariant();
         if (variant == null) return;
 
-        if (CombatStyle.melee.contains(combatStyle)) {
-            CombatStyle current = data.slayerMonsterCombatStyleMelee.get(variant);
+        if (CombatStyle.getMeleeStyles().contains(combatStyle)) {
+            CombatStyle current = list.getMeleeStyles().get(variant);
             if (current == combatStyle) return;
-            data.slayerMonsterCombatStyleMelee.put(variant, combatStyle);
+            list.getMeleeStyles().put(variant, combatStyle);
         }
-        else if (CombatStyle.ranged.contains(combatStyle)) {
-            CombatStyle current = data.slayerMonsterCombatStyleRanged.get(variant);
+        else if (CombatStyle.getRangedStyles().contains(combatStyle)) {
+            CombatStyle current = list.getRangedStyles().get(variant);
             if (current == combatStyle) return;
-            data.slayerMonsterCombatStyleRanged.put(variant, combatStyle);
+            list.getRangedStyles().put(variant, combatStyle);
         }
-        else if (CombatStyle.magic.contains(combatStyle)) {
-            CombatStyle current = data.slayerMonsterCombatStyleMagic.get(variant);
+        else if (CombatStyle.getMagicStyles().contains(combatStyle)) {
+            CombatStyle current = list.getMagicStyles().get(variant);
             if (current == combatStyle) return;
-            data.slayerMonsterCombatStyleMagic.put(variant, combatStyle);
+            list.getMagicStyles().put(variant, combatStyle);
         }
 
         try {
@@ -256,24 +418,25 @@ public class SlayerView extends View {
             e.printStackTrace();
         }
         finally {
-            this.variantCombatStyleTable.fillTableModel();
-            this.variantCombatStyleTable.revalidate();
-            this.variantCombatStyleTable.repaint();
+            this.listVariantCombatStyleTable.fillTableModel();
+            this.listVariantCombatStyleTable.revalidate();
+            this.listVariantCombatStyleTable.repaint();
         }
     }
 
     public void setVariation(Monsters monster, int percentage) {
-        System.out.println("Percentage: " + percentage);
-
         CacheData data = panel.getCache().getData();
-        SlayerMonsters m = data.slayerSelectedMonster;
+        SlayerListData list = data.getSlayer().getList();
+        if (list == null) return;
+
+        SlayerMonsters m = list.getSelectedMonster();
         if (monster == null) return;
     
         // Get the variation percentages
-        Map<Monsters, Integer> percentages = data.slayerMonsterVariation.get(m);
+        Map<Monsters, Integer> percentages = list.getVariations().get(m);
 
         // Get the variation order
-        List<Monsters> order = List.of(data.slayerMonsterVariationOrder.get(m));
+        List<Monsters> order = List.of(list.getVariationOrders().get(m));
 
         // Get the index
         int index = order.indexOf(monster);
@@ -304,7 +467,6 @@ public class SlayerView extends View {
             // First decrease the percentages before it gradually
             if (percentageBefore > 0) {
                 for (int i = index - 1; i >= 0; i --) {
-                    System.out.println("To adjust: " + toAdjust);
                     Monsters monsterOther = order.get(i);
                     float percentageOther = percentages.get(monsterOther);
                     float decreased = Math.round(toAdjust * (percentageOther / percentageBeforeAndAfter));
@@ -381,10 +543,10 @@ public class SlayerView extends View {
 
         // Put the percentage in the list
         percentages.put(monster, percentage);
-        data.slayerMonsterVariation.put(m, percentages);
+        list.getVariations().put(m, percentages);
 
         // Order the array
-        data.slayerMonsterVariationOrder.put(
+        list.getVariationOrders().put(
             m,
             percentages.entrySet()
                 .stream()
@@ -408,13 +570,13 @@ public class SlayerView extends View {
         }
         finally {
             // Reload the view
-            int variantTableIndex = List.of(this.panel.getComponents()).indexOf(this.variantTable);
-            this.panel.remove(this.variantTable);
-            this.variantTable = new VariantTable(this);
-            this.panel.add(this.variantTable, variantTableIndex);
-            this.variantTable.fillTableModel();
-            this.variantTable.revalidate();
-            this.variantTable.repaint();
+            int variantTableIndex = List.of(this.panel.getComponents()).indexOf(this.listVariantTable);
+            this.panel.remove(this.listVariantTable);
+            this.listVariantTable = new VariantTable(this);
+            this.panel.add(this.listVariantTable, variantTableIndex);
+            this.listVariantTable.fillTableModel();
+            this.listVariantTable.revalidate();
+            this.listVariantTable.repaint();
             this.panel.revalidate();
             this.panel.repaint();
         }
@@ -422,20 +584,19 @@ public class SlayerView extends View {
 
     public void setXpRate(CombatStyle combatStyle, int xpRate) {
         CacheData data = panel.getCache().getData();
-        Monsters monster = data.slayerSelectedVariant;
+        SlayerListData list = data.getSlayer().getList();
+        if (list == null) return;
+        Monsters monster = list.getSelectedVariant();
         if (monster == null) return;
 
-        if (CombatStyle.melee.contains(combatStyle)) {
-            System.out.println("Attack");
-            data.slayerMonsterCombatStyleMeleeHourlyRate.put(monster, xpRate);
+        if (CombatStyle.getMeleeStyles().contains(combatStyle)) {
+            list.getMeleeHourlyRates().put(monster, xpRate);
         }
-        else if (CombatStyle.ranged.contains(combatStyle)) {
-            System.out.println("Range");
-            data.slayerMonsterCombatStyleRangedHourlyRate.put(monster, xpRate);
+        else if (CombatStyle.getRangedStyles().contains(combatStyle)) {
+            list.getRangedHourlyRates().put(monster, xpRate);
         }
-        else if (CombatStyle.magic.contains(combatStyle)) {
-            System.out.println("Mage");
-            data.slayerMonsterCombatStyleMagicHourlyRate.put(monster, xpRate);
+        else if (CombatStyle.getMagicStyles().contains(combatStyle)) {
+            list.getMagicHourlyRates().put(monster, xpRate);
         }
 
         try {
@@ -445,18 +606,20 @@ public class SlayerView extends View {
             e.printStackTrace();
         }
         finally {
-            this.variantCombatStyleTable.fillTableModel();
-            this.variantCombatStyleTable.revalidate();
-            this.variantCombatStyleTable.repaint();
+            this.listVariantCombatStyleTable.fillTableModel();
+            this.listVariantCombatStyleTable.revalidate();
+            this.listVariantCombatStyleTable.repaint();
         }
     }
 
     public void setCompletionTime(int minutes) {
         CacheData data = panel.getCache().getData();
-        Monsters monster = data.slayerSelectedVariant;
+        SlayerListData list = data.getSlayer().getList();
+        if (list == null) return;
+        Monsters monster = list.getSelectedVariant();
         if (monster == null) return;
 
-        data.slayerMonsterCompletionTime.put(monster, minutes);
+        list.getMonsterCompletionTimes().put(monster, minutes);
 
         try {
             panel.getCache().save();
@@ -465,9 +628,286 @@ public class SlayerView extends View {
             e.printStackTrace();
         }
         finally {
-            this.variantCombatStyleTable.fillTableModel();
-            this.variantCombatStyleTable.revalidate();
-            this.variantCombatStyleTable.repaint();
+            this.listVariantCombatStyleTable.fillTableModel();
+            this.listVariantCombatStyleTable.revalidate();
+            this.listVariantCombatStyleTable.repaint();
+        }
+    }
+
+    public void setSelectedList(SlayerPlanningData planning, String listUuid) {
+        CacheData data = panel.getCache().getData();
+        planning.setListUuid(listUuid);
+        try {
+            panel.getCache().save();
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+        finally {
+            int startIndex = -1;
+            for (int i = 0; i < panel.getComponents().length; i ++) {
+                Component component = panel.getComponent(i);
+                if (component instanceof SlayerPlanningTopTable) {
+                    startIndex = i;
+                    break;
+                }
+            }
+            if (startIndex == -1) return;
+            for (int i = 0; i < plannerTopTables.size(); i ++) {
+                if (!plannerTopTables.get(i).getPlanning().getUuid().equals(planning.getUuid())) {
+                    continue;
+                }
+                int index = startIndex + i * 4;
+                panel.remove(index);
+                panel.remove(index);
+                panel.remove(index);
+                plannerTopTables.remove(i);
+                plannerTables.remove(i);
+                plannerPercentageTables.remove(i);
+                plannerTopTables.add(i, new SlayerPlanningTopTable(this, planning.getUuid()));
+                plannerTables.add(i, new SlayerPlanningTable(this, planning.getUuid()));
+                plannerPercentageTables.add(i, new SlayerPlanningPercentageTable(this, planning.getUuid()));
+                panel.add(plannerTopTables.get(i), index);
+                panel.add(plannerTables.get(i), index + 1);
+                panel.add(plannerPercentageTables.get(i), index + 2);
+                panel.revalidate();
+                panel.repaint();
+            }
+        }
+    }
+
+    private JComboBox<?> createListComboBox() {
+        CacheData data = panel.getCache().getData();
+        List<ComboBoxModel> comboBoxValues = new ArrayList<>();
+        ComboBoxModel selectedItem = null;
+        for (SlayerViewNames view : SlayerViewNames.values()) {
+            ComboBoxModel model = new ComboBoxModel(view);
+            comboBoxValues.add(model);
+            if (view == data.getSlayer().getView()) {
+                selectedItem = model;
+            }
+        }
+        for (SlayerListData list : data.getSlayer().getLists()) {
+            ComboBoxModel model = new ComboBoxModel(list);
+            comboBoxValues.add(model);
+            if (list.getUuid().equals(data.getSlayer().getListUuid())) {
+                selectedItem = model;
+            }
+        }
+        JComboBox<ComboBoxModel> cb = new JComboBox<>(comboBoxValues.toArray(new ComboBoxModel[comboBoxValues.size()]));
+        cb.setSelectedItem(selectedItem);
+        // Custom renderer to display icon and name
+        cb.setRenderer(new ListCellRenderer<ComboBoxModel>() {
+            @Override
+            public Component getListCellRendererComponent(
+                    JList<? extends ComboBoxModel> list,
+                    ComboBoxModel value,
+                    int index,
+                    boolean isSelected,
+                    boolean cellHasFocus) {
+
+                JLabel label = new JLabel();
+
+                if (value == null) {
+                    label.setText("Select an option");
+                }
+                else if (value.list != null) {
+                    label.setText(value.list.getName());
+                    label.setIcon(Resources.loadImageIcon(value.list.getMaster().getIconPath().getPath(), 18, 18));
+                }
+                else if (value.view != null) {
+                    label.setText(value.view.getName());
+                    label.setIcon(Resources.loadImageIcon(value.view.getIconPath().getPath(), 18, 18));
+                }
+
+                label.setOpaque(true);
+
+                if (
+                    value == null || (
+                        (value.list != null && value.list == panel.getCache().getData().getSlayer().getList())
+                        || (value.view != null && value.view == panel.getCache().getData().getSlayer().getView())
+                    )
+                ) {
+                    label.setBackground(Theme.TABLE_BG_COLOR_SELECTED);
+                    label.setForeground(Color.white);
+                }
+                else if (isSelected) {
+                    label.setBackground(Theme.TABLE_BG_COLOR_HOVER);
+                    label.setForeground(Color.white);
+                }
+                else {
+                    label.setBackground(Theme.TABLE_BG_COLOR);
+                    label.setForeground(Color.white);
+                }
+
+                return label;
+            }
+        });
+
+        // Add an ActionListener to handle selection changes
+        cb.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // Get the selected item
+                ComboBoxModel selectedOption = (ComboBoxModel) cb.getSelectedItem();
+                CacheData data = panel.getCache().getData();
+
+                if (selectedOption.view != null && data.getSlayer().getView() != selectedOption.view) {
+                    data.getSlayer().setListUuid(null);
+                    data.getSlayer().setView(selectedOption.view);
+                }
+                else if (selectedOption.list != null && data.getSlayer().getList() != selectedOption.list) {
+                    data.getSlayer().setListUuid(selectedOption.list.getUuid());
+                    data.getSlayer().setView(null);
+                }
+                else {
+                    return;
+                }
+                
+                try {
+                    panel.getCache().save();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                } finally {
+                    load();
+                    panel.revalidate();
+                    panel.repaint();
+                }
+            }
+        });
+        return cb;
+    }
+
+    private JComboBox<TaskComboBoxModel> createListTasksComboBox() {
+        CacheData data = panel.getCache().getData();
+        SlayerListData slayerList = data.getSlayer().getList();
+        if (slayerList == null) return null;
+
+        List<TaskComboBoxModel> comboBoxValues = new ArrayList<>();
+        TaskComboBoxModel allTasks = new TaskComboBoxModel(IconPaths.SkillSlayer);
+        TaskComboBoxModel selectedItem = null;
+        comboBoxValues.add(allTasks);
+        if (slayerList.getSelectedMonster() == null) {
+            selectedItem = allTasks;
+        }
+        for (SlayerAssignment assignment : slayerList.getMaster().getMaster().getAssignments()) {
+            TaskComboBoxModel model = new TaskComboBoxModel(assignment.getMonster());
+            comboBoxValues.add(model);
+            if (slayerList.getSelectedMonster() == assignment.getMonster()) {
+                selectedItem = model;
+            }
+        }
+
+        JComboBox<TaskComboBoxModel> cb = new JComboBox<>(comboBoxValues.toArray(new TaskComboBoxModel[comboBoxValues.size()])) {
+            @Override
+            public String getToolTipText(MouseEvent e) {
+                TaskComboBoxModel item = (TaskComboBoxModel)getSelectedItem();
+                return item == null || item.monster == null
+                    ? null
+                    : item.monster.getName();
+            }
+        };
+        cb.setSelectedItem(selectedItem);
+
+        cb.setRenderer(new ListCellRenderer<TaskComboBoxModel>() {
+            @Override
+            public Component getListCellRendererComponent(
+                    JList<? extends TaskComboBoxModel> list,
+                    TaskComboBoxModel value,
+                    int index,
+                    boolean isSelected,
+                    boolean cellHasFocus) {
+
+                JLabel label = new JLabel();
+
+                if (value == null) {
+                    label.setText("Select an option");
+                }
+                else if (value.icon != null) {
+                    label.setText("All tasks");
+                    label.setIcon(Resources.loadImageIcon(value.icon.getPath(), 18, 18));
+                }
+                else if (value.monster != null) {
+                    label.setText(value.monster.getName());
+                    label.setIcon(Resources.loadImageIcon(value.monster.getIconPath().getPath(), 18, 18));
+                }
+
+                label.setOpaque(true);
+
+                if (
+                    value == null || (
+                        (value.icon != null && slayerList.getSelectedMonster() == null)
+                        || (value.monster != null && slayerList.getSelectedMonster() == value.monster)
+                    )
+                ) {
+                    label.setBackground(Theme.TABLE_BG_COLOR_SELECTED);
+                    label.setForeground(Color.white);
+                }
+                else if (isSelected) {
+                    label.setBackground(Theme.TABLE_BG_COLOR_HOVER);
+                    label.setForeground(Color.white);
+                }
+                else {
+                    label.setBackground(Theme.TABLE_BG_COLOR);
+                    label.setForeground(Color.white);
+                }
+
+                return label;
+            }
+        });
+
+        cb.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                TaskComboBoxModel selectedOption = (TaskComboBoxModel)cb.getSelectedItem();
+
+                if (
+                    (selectedOption.icon != null && slayerList.getSelectedMonster() != null)
+                    || (selectedOption.monster != null && slayerList.getSelectedMonster() != selectedOption.monster)
+                ) {
+                    setSelectedMonster(selectedOption.icon == null ? selectedOption.monster : null);
+                    panel.revalidate();
+                    panel.repaint();
+                }
+            }
+        });
+
+        return cb;
+    } 
+
+    public static class TaskComboBoxModel {
+        private SlayerMonsters monster;
+
+        private IconPaths icon;
+
+        public TaskComboBoxModel(SlayerMonsters monster) {
+            this.monster = monster;
+            this.icon = null;
+        }
+
+        public TaskComboBoxModel(IconPaths icon) {
+            this.icon = icon;
+            this.monster = null;
+        }
+    }
+
+    public static class ComboBoxModel {
+        public SlayerViewNames getView() {
+            return view;
+        }
+        public SlayerViewNames view = null;
+
+        public SlayerListData getList() {
+            return list;
+        }
+        public SlayerListData list = null;
+
+        public ComboBoxModel(SlayerViewNames view) {
+            this.view = view;
+        }
+
+        public ComboBoxModel(SlayerListData list) {
+            this.list = list;
         }
     }
 }

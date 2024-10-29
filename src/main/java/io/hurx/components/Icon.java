@@ -59,6 +59,12 @@ public class Icon extends JPanel {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
+        // Draw the background
+        if (getBackground() != null) {
+            setOpaque(true);
+            g.setColor(getBackground());
+            g.fillRect(0, 0, getWidth(), getHeight());
+        }
         // Draw the icon
         if (getIcon() != null) {
             g.drawImage(getIcon().getImage(), hPadding, vPadding, this.getWidth() - hPadding * 2, this.getWidth() - hPadding * 2, this);

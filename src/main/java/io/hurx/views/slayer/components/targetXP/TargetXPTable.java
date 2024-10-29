@@ -14,8 +14,9 @@ import java.util.List;
 import java.util.ArrayList;
 import java.text.NumberFormat;
 import java.util.Locale;
+import io.hurx.components.table.defaultTable.DefaultTable;
 
-public class TargetXPTable extends JTable {
+public class TargetXPTable extends DefaultTable {
     public final static int ICONS_PER_ROW = 5;
     public final static int H_PADDING = 10;
     public final static int V_PADDING = 10;
@@ -52,7 +53,7 @@ public class TargetXPTable extends JTable {
     });
 
     public TargetXPTable(SlayerView view) {
-        super(new DefaultTableModel());
+        super(DefaultTable.Options.Builder.construct().columnCount(ICONS_PER_ROW).build());
         this.panel = view.getPanel();
         this.view = view;
         TargetXPTable table = this;
@@ -63,10 +64,7 @@ public class TargetXPTable extends JTable {
         for (int i = 0; i < ICONS_PER_ROW; i ++) {
             getColumnModel().getColumn(i).setCellRenderer(new CellRenderer());
         }
-        table.setDoubleBuffered(true);
-        super.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         super.setRowHeight(230 / ICONS_PER_ROW);
-        super.setVisible(true);
         fillTableModel();
     }
 
@@ -87,7 +85,9 @@ public class TargetXPTable extends JTable {
         }
     }
 
+    @Override
     public void fillTableModel() {
+        super.fillTableModel();
         DefaultTableModel model = (DefaultTableModel)this.getModel();
 
         for (int i = model.getRowCount() - 1; i >= 0; i --) {

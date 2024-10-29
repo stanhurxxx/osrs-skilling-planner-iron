@@ -5,6 +5,9 @@ public enum IconPaths {
     LocationNievesCave("icons/locations/nieve-cave.png"),
     LocationKourendCatacombs("icons/locations/catacombs.png"),
     LocationWilderness("icons/locations/wilderness.png"),
+    
+    NPCDuradel("icons/npcs/duradel.png"),
+    NPCNieve("icons/npcs/nieve.png"),
 
     MonsterAberrantSpectre("icons/monsters/aberrant-spectre.png"),
     MonsterAbyssalDemon("icons/monsters/abyssal-demon.png"),
@@ -127,6 +130,7 @@ public enum IconPaths {
     SkillThieving("icons/skills/thieving.png"),
     SkillWoodcutting("icons/skills/woodcutting.png"),
     SkillEHP("icons/panel-icon.png"),
+    SkillOverall("icons/skills/overall.png"),
 
     CombatStyleNone("icons/combat-styles/none.png"),
     CombatStyleControlled("icons/combat-styles/controlled.png"),
@@ -160,7 +164,13 @@ public enum IconPaths {
     CombatStyleSmokeBarrage("icons/combat-styles/smoke-barrage.png"),
     CombatStyleSmokeBarrageDefensive("icons/combat-styles/smoke-barrage.png"),
     CombatStyleShadowBarrage("icons/combat-styles/shadow-barrage.png"),
-    CombatStyleShadowBarrageDefensive("icons/combat-styles/shadow-barrage.png");
+    CombatStyleShadowBarrageDefensive("icons/combat-styles/shadow-barrage.png"),
+
+    MenuAdd("icons/menu/add.png"),
+    MenuBack("icons/menu/back.png"),
+    MenuFilter("icons/menu/filter.png"),
+    MenuSettings("icons/menu/settings.png"),
+    MenuEdit("icons/menu/edit.png"),
     ;
 
     public String getPath() {

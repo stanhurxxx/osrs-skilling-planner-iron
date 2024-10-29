@@ -212,11 +212,11 @@ public enum SlayerMonsters {
         Monsters.Wyrmlings
     });
 
-    public String getDisplayName() {
-        return displayName;
+    public String getName() {
+        return name;
     }
 
-    private final String displayName;
+    private final String name;
 
     public IconPaths getIconPath() {
         return iconPath;
@@ -232,13 +232,13 @@ public enum SlayerMonsters {
 
     // Constructor for the enum
     SlayerMonsters(String displayName, IconPaths iconPath, Monsters[] monsters) {
-        this.displayName = displayName;
+        this.name = displayName;
         this.iconPath = iconPath;
         this.monsters = monsters;
     }
 
     @Override
     public String toString() {
-        return displayName; // Override toString to return the string value
+        return name; // Override toString to return the string value
     }
 }
