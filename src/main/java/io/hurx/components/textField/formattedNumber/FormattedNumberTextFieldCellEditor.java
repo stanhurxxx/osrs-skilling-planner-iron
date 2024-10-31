@@ -18,7 +18,6 @@ import java.math.BigDecimal;
  */
 public class FormattedNumberTextFieldCellEditor extends AbstractCellEditor implements TableCellEditor {
     private FormattedNumberTextField textField;
-    private int index;
 
     /**
      * Constructs a FormattedNumberTextFieldCellEditor with a new FormattedNumberTextField.

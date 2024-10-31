@@ -39,7 +39,7 @@ tasks.register('shadowJar', Jar) {
     dependsOn configurations.testRuntimeClasspath
     manifest {
         attributes(
-            'Main-Class': 'io.hurx.SkillingPlannerPluginTest', // Ensure this points to your main class
+            'Main-Class': 'io.hurx.PluginTest', // Ensure this points to your main class
             'Multi-Release': true
         )
     }
