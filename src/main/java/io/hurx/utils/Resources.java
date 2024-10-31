@@ -2,22 +2,22 @@ package io.hurx.utils;
 
 import javax.swing.ImageIcon;
 import java.awt.Image;
-
 import java.io.IOException;
 import java.net.URL;
-
 import javax.imageio.ImageIO;
 
 /**
- * Resources management
+ * Utility class for managing resources, particularly images.
  */
 public class Resources {
+    
     /**
-     * Loads an image
-     * @param path the relative path from resources folder.
-     * @param width the width of the image
-     * @param height the height of the image
-     * @return
+     * Loads an image as an ImageIcon from the specified relative path.
+     *
+     * @param path   the relative path to the image file, starting from the resources folder.
+     * @param width  the desired width of the image after scaling.
+     * @param height the desired height of the image after scaling.
+     * @return an ImageIcon containing the loaded and scaled image, or null if the image could not be loaded.
      */
     public static ImageIcon loadImageIcon(String path, int width, int height) {
         try {

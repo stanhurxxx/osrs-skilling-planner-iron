@@ -1,4 +1,4 @@
-package io.hurx.components.textField.abbreviatedNumberFormattedTextField;
+package io.hurx.components.textField.formattedNumber;
 
 import javax.swing.AbstractAction;
 import javax.swing.AbstractCellEditor;
@@ -7,53 +7,65 @@ import javax.swing.KeyStroke;
 import javax.swing.table.TableCellEditor;
 
 import java.awt.Component;
-
 import java.util.EventObject;
 import java.awt.event.ActionEvent;
 import java.math.BigDecimal;
 
-public class AbbreviatedNumberFormattedTextFieldCellEditor extends AbstractCellEditor implements TableCellEditor {
-    private AbbreviatedNumberFormattedTextField textField;
-
-    public int getIndex() {
-        return index;
-    }
-
-    public void setIndex(int index) {
-        this.index = index;
-    }
-
+/**
+ * A custom cell editor for JTable that allows for editing of numeric values
+ * using a FormattedNumberTextField. The editor supports formatted
+ * input with thousand separators and up to two decimal places.
+ */
+public class FormattedNumberTextFieldCellEditor extends AbstractCellEditor implements TableCellEditor {
+    private FormattedNumberTextField textField;
     private int index;
 
-    public AbbreviatedNumberFormattedTextFieldCellEditor() {
-        this.textField = new AbbreviatedNumberFormattedTextField();
+    /**
+     * Constructs a FormattedNumberTextFieldCellEditor with a new FormattedNumberTextField.
+     */
+    public FormattedNumberTextFieldCellEditor() {
+        this.textField = new FormattedNumberTextField();
         configureTextField(textField);
     }
 
-    // Configure the textField with actions for stopping editing
-    public void configureTextField(AbbreviatedNumberFormattedTextField textField) {
+    /**
+     * Configures the specified text field with actions for stopping editing.
+     * Binds the ENTER key to stop cell editing when pressed.
+     *
+     * @param textField The text field to configure with key bindings.
+     */
+    public void configureTextField(FormattedNumberTextField textField) {
         textField.getInputMap().put(KeyStroke.getKeyStroke("ENTER"), "stopCellEditing");
         textField.getActionMap().put("stopCellEditing", new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                stopCellEditing();
+                stopCellEditing(); // Stop editing when ENTER is pressed
             }
         });
     }
 
-    public AbbreviatedNumberFormattedTextField getTextField() {
+    /**
+     * Retrieves the text field used by this cell editor.
+     *
+     * @return The FormattedNumberTextField instance used as the editor.
+     */
+    public FormattedNumberTextField getTextField() {
         return this.textField;
     }
 
-    // Set up the text field for the editor each time it's called for a new cell
-    public void setTextField(AbbreviatedNumberFormattedTextField textField) {
+    /**
+     * Sets a new text field for this editor and configures it.
+     *
+     * @param textField The new FormattedNumberTextField to set.
+     */
+    public void setTextField(FormattedNumberTextField textField) {
         configureTextField(textField);
         this.textField = textField;
     }
 
     @Override
     public boolean shouldSelectCell(EventObject e) {
-        return true;
+        return true; // Always select the cell when editing begins
     }
 
     @Override
@@ -63,14 +75,14 @@ public class AbbreviatedNumberFormattedTextFieldCellEditor extends AbstractCellE
             if (value == null) {
                 throw new NumberFormatException("Parsed value is null");
             }
-            // Update the internal value if parsing succeeds
+            // Notify listeners that editing has stopped
             super.fireEditingStopped();
-            return true;
+            return true; // Indicate successful editing
         } catch (Exception e) {
             // Handle invalid input by resetting to a default value
             textField.setValue(BigDecimal.ZERO);
             System.err.println("Invalid input, resetting to zero: " + e.getMessage());
-            return false;
+            return false; // Indicate that editing was not successful
         }
     }
 

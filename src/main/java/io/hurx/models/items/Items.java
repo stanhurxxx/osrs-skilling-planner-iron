@@ -1,5 +1,9 @@
 package io.hurx.models.items;
 
+/**
+ * Enumeration representing different game items.
+ * Each item is constructed using the Item class with specified properties.
+ */
 public enum Items {
     // Alchs
     AirBattlestaff(Item.Builder.id(1397).type(ItemType.Alch).build()),
@@ -259,28 +263,23 @@ public enum Items {
     WesternBanner4(Item.Builder.id(13144).type(ItemType.Meta).build()),
     ;
 
-    /**
-     * Get the item instance
-     * @return
-     */
-    public Item getItem() {
-        return item;
-    }
-
     private final Item item;
 
+    /**
+     * Constructs an item with the specified item properties.
+     * 
+     * @param item the item to be constructed
+     */
     Items(Item item) {
-        // this.displayName = displayName;
         this.item = item;
     }
 
-    // Getter method to access the string value
-    // public String getDisplayName() {
-    //     return displayName;
-    // }
-
-    @Override
-    public String toString() {
-        return item.getName();
+    /**
+     * Retrieves the underlying Item object associated with the enum constant.
+     * 
+     * @return the Item associated with this enum constant
+     */
+    public Item getItem() {
+        return item;
     }
 }

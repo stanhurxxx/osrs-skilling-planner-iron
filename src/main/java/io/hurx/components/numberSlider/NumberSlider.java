@@ -6,23 +6,42 @@ import javax.swing.event.ChangeListener;
 
 import io.hurx.utils.Theme;
 
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * A custom component that represents a number slider, allowing users to select a numeric value
+ * within a specified range by dragging a handle along a line.
+ */
 public class NumberSlider extends JComponent {
+    /** Horizontal padding around the slider. */
     public final static int H_PADDING = 10;
-    public final static int SIZE = 20; // Width of the slider handle
+    /** Width of the slider handle. */
+    public final static int SIZE = 20;
+
+    /** Minimum value of the slider. */
     private int minValue = 1;
+    /** Maximum value of the slider. */
     private int maxValue = 150;
-    private int currentValue = 1; // Current selected value
-    private int dragHandle = -1; // -1 for none, 0 for handle
+    /** Current selected value of the slider. */
+    private int currentValue = 1;
+    /** Indicator of whether the handle is currently being dragged. */
+    private boolean isHandleDragging = false;
+    /** Format for displaying the slider's current value. */
     private NumberSliderFormat format = NumberSliderFormat.Default;
 
-    // List of change listeners
+    // List of change listeners to notify about value changes
     private final List<ChangeListener> changeListeners = new ArrayList<>();
 
+    /**
+     * Constructs a NumberSlider with default minimum and maximum values,
+     * and sets up mouse listeners for interaction.
+     */
     public NumberSlider() {
         setPreferredSize(new Dimension(300, SIZE));
         
@@ -33,13 +52,13 @@ public class NumberSlider extends JComponent {
                 // Check if the mouse click is inside the slider handle area
                 if (e.getX() >= getHandlePosition(currentValue) && 
                     e.getX() <= getHandlePosition(currentValue) + getHandleWidth()) {
-                    dragHandle = 0; // Start dragging
+                    isHandleDragging = true; // Start dragging
                 }
             }
 
             @Override
             public void mouseReleased(MouseEvent e) {
-                dragHandle = -1; // Stop dragging
+                isHandleDragging = false; // Stop dragging
                 int newValue = valueForPosition(e.getX());
                 setCurrentValue(newValue); // Update the slider's value
             }
@@ -49,7 +68,7 @@ public class NumberSlider extends JComponent {
         addMouseMotionListener(new MouseAdapter() {
             @Override
             public void mouseDragged(MouseEvent e) {
-                if (dragHandle == 0) { // If dragging is active
+                if (isHandleDragging) { // If dragging is active
                     int newValue = valueForPosition(e.getX());
                     setCurrentValue(newValue); // Update the slider's value
                 }
@@ -57,6 +76,11 @@ public class NumberSlider extends JComponent {
         });
     }
 
+    /**
+     * Retrieves the width of the slider handle based on the current format.
+     *
+     * @return the width of the handle
+     */
     public int getHandleWidth() {
         return this.format == NumberSliderFormat.Percentage
             ? 48
@@ -65,6 +89,11 @@ public class NumberSlider extends JComponent {
                 : 64;
     }
 
+    /**
+     * Sets the format for the slider, adjusting the min and max values if needed.
+     *
+     * @param format the format to set for the slider
+     */
     public void setFormat(NumberSliderFormat format) {
         this.format = format;
         if (format == NumberSliderFormat.Percentage) {
@@ -73,7 +102,12 @@ public class NumberSlider extends JComponent {
         }
     }
 
-    // Set minimum value and update the slider
+    /**
+     * Sets the minimum value for the slider. If the current value is less than
+     * the new minimum, it is clamped to the minimum value.
+     *
+     * @param minValue the new minimum value
+     */
     public void setMinValue(int minValue) {
         this.minValue = minValue;
         if (currentValue < minValue) {
@@ -83,7 +117,12 @@ public class NumberSlider extends JComponent {
         repaint();
     }
 
-    // Set maximum value and update the slider
+    /**
+     * Sets the maximum value for the slider. If the current value is greater than
+     * the new maximum, it is clamped to the maximum value.
+     *
+     * @param maxValue the new maximum value
+     */
     public void setMaxValue(int maxValue) {
         this.maxValue = maxValue;
         if (currentValue > maxValue) {
@@ -93,7 +132,11 @@ public class NumberSlider extends JComponent {
         repaint();
     }
 
-    // Set current value and ensure it respects the min and max
+    /**
+     * Sets the current value of the slider, ensuring it respects the minimum and maximum values.
+     *
+     * @param currentValue the new current value
+     */
     public void setCurrentValue(int currentValue) {
         if (currentValue < minValue) {
             currentValue = minValue; // Clamp to minValue
@@ -109,17 +152,27 @@ public class NumberSlider extends JComponent {
         }
     }
 
-    // Get the current value
+    /**
+     * Retrieves the current value of the slider.
+     *
+     * @return the current value
+     */
     public int getCurrentValue() {
         return currentValue;
     }
 
-    // Add a ChangeListener
+    /**
+     * Adds a ChangeListener that will be notified when the slider's value changes.
+     *
+     * @param listener the listener to add
+     */
     public void addChangeListener(ChangeListener listener) {
         changeListeners.add(listener);
     }
 
-    // Notify all registered ChangeListeners
+    /**
+     * Notifies all registered ChangeListeners of a change in the slider's value.
+     */
     private void notifyChangeListeners() {
         ChangeEvent event = new ChangeEvent(this);
         for (ChangeListener listener : changeListeners) {
@@ -127,10 +180,22 @@ public class NumberSlider extends JComponent {
         }
     }
 
+    /**
+     * Calculates the position of the slider handle based on the current value.
+     *
+     * @param value the current value
+     * @return the x-coordinate of the handle position
+     */
     private int getHandlePosition(int value) {
         return (int) ((double) (value - minValue) / (maxValue - minValue) * (getWidth() - getHandleWidth() - H_PADDING * 2)) + H_PADDING;
     }
 
+    /**
+     * Calculates the value corresponding to a given x-coordinate on the slider.
+     *
+     * @param x the x-coordinate
+     * @return the value at the specified position
+     */
     private int valueForPosition(int x) {
         // Adjust x to account for the left half of the handle
         int adjustedX = x - H_PADDING / 2 - (getHandleWidth() / 2);
@@ -146,6 +211,11 @@ public class NumberSlider extends JComponent {
         return (int) (minValue + ((double) adjustedX / (getWidth() - getHandleWidth() - H_PADDING)) * (maxValue - minValue));
     }
 
+    /**
+     * Retrieves the label to be displayed on the slider handle based on the current format.
+     *
+     * @return the label for the current value
+     */
     private String getLabel() {
         return format == NumberSliderFormat.Default
             ? Integer.toString(currentValue)
@@ -154,6 +224,11 @@ public class NumberSlider extends JComponent {
                 : (int)Math.floor(currentValue / 60) + "h " + (int)(currentValue % 60) + "m";
     }
 
+    /**
+     * Paints the component, drawing the slider line, handle, and current value label.
+     *
+     * @param g the Graphics context for painting
+     */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);

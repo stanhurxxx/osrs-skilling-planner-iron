@@ -6,9 +6,19 @@ import io.hurx.plugin.PluginRepository;
 import io.hurx.plugin.PluginViews;
 
 /**
- * The overview view
+ * Represents the overview view of the plugin.
+ * 
+ * This class is responsible for displaying the main overview interface,
+ * which presents various statistics, financial information, and other
+ * relevant data to the user. It extends the base View class, utilizing
+ * the plugin's master and repository for lifecycle management and data access.
  */
 public class OverviewView extends View<PluginMaster, PluginViews, PluginRepository> {
+    /**
+     * Constructs a new OverviewView instance.
+     *
+     * @param master the PluginMaster instance that manages the plugin's lifecycle
+     */
     public OverviewView(PluginMaster master) {
         super(master, PluginViews.Overview);
     }

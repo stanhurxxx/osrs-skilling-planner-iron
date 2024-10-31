@@ -1,5 +1,9 @@
 package io.hurx.models;
 
+/**
+ * Enum representing various icon paths used within the application.
+ * This includes paths for locations, NPCs, monsters, skills, combat styles, menus, and prayers.
+ */
 public enum IconPaths {
     LocationSlayerTower("icons/locations/slayer-tower.png"),
     LocationNievesCave("icons/locations/nieve-cave.png"),
@@ -180,17 +184,29 @@ public enum IconPaths {
     PrayerMysticMight("icons/prayers/mystic-might.png"),
     PrayerPiety("icons/prayers/piety.png"),
     PrayerRigour("icons/prayers/rigour.png"),
-    PrayerProtection("icons/prayers/protection.png"),
-    ;
+    PrayerProtection("icons/prayers/protection.png");
 
-    public String getPath() {
-        return this.path;
-    }
+    /**
+     * The file path for the icon.
+     */
+    private final String path;
 
-    private String path;
-
+    /**
+     * Constructor to initialize the enum with the corresponding icon path.
+     *
+     * @param path the path of the icon
+     */
     IconPaths(String path) {
         this.path = path;
+    }
+
+    /**
+     * Retrieves the path of the icon.
+     *
+     * @return the icon path as a String
+     */
+    public String getPath() {
+        return this.path;
     }
 
     @Override

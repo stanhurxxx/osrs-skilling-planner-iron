@@ -2,7 +2,13 @@ package io.hurx.models.slayer.monsters;
 
 import io.hurx.models.IconPaths;
 
+/**
+ * Enum representing various Slayer Monsters in the game.
+ * Each monster category includes a name, an associated icon path,
+ * and a list of specific monsters that belong to that category.
+ */
 public enum SlayerMonsters {
+
     AberrantSpectres("Aberrant Spectres", IconPaths.MonsterAberrantSpectre, new Monsters[] {
         Monsters.AberrantSpectresNieve,
         Monsters.AberrantSpectresSlayerTower,
@@ -212,31 +218,60 @@ public enum SlayerMonsters {
         Monsters.Wyrmlings
     });
 
-    public String getName() {
-        return name;
-    }
-
+    /** The display name of the Slayer monster category. */
     private final String name;
 
-    public IconPaths getIconPath() {
-        return iconPath;
-    }
-
+    /** The icon path associated with the Slayer monster category. */
     private final IconPaths iconPath;
 
-    public Monsters[] getMonsters() {
-        return monsters;
-    }
-
+    /** The list of specific monsters within this Slayer monster category. */
     private final Monsters[] monsters;
 
-    // Constructor for the enum
+    /**
+     * Constructor for the SlayerMonsters enum.
+     *
+     * @param displayName The display name for the monster category.
+     * @param iconPath The icon path associated with the monster category.
+     * @param monsters An array of specific monsters belonging to this category.
+     */
     SlayerMonsters(String displayName, IconPaths iconPath, Monsters[] monsters) {
         this.name = displayName;
         this.iconPath = iconPath;
         this.monsters = monsters;
     }
 
+    /**
+     * Gets the name of the Slayer monster category.
+     *
+     * @return The display name of the Slayer monster category.
+     */
+    public String getName() {
+        return name;
+    }
+
+    /**
+     * Gets the icon path associated with the Slayer monster category.
+     *
+     * @return The icon path of the Slayer monster category.
+     */
+    public IconPaths getIconPath() {
+        return iconPath;
+    }
+
+    /**
+     * Gets the array of specific monsters within this Slayer monster category.
+     *
+     * @return An array of specific monsters belonging to this category.
+     */
+    public Monsters[] getMonsters() {
+        return monsters;
+    }
+
+    /**
+     * Returns a string representation of the Slayer monster category.
+     *
+     * @return The display name of the Slayer monster category.
+     */
     @Override
     public String toString() {
         return name; // Override toString to return the string value

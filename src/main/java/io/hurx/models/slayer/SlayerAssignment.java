@@ -40,22 +40,22 @@ public class SlayerAssignment {
         this.weight = weight;
     }
 
+    /**
+     * Iniializes the assignment
+     * @param monster the monster
+     * @param min the minimum amount of assignment
+     * @param max the maximum amount of assignment
+     * @param weight the weight of the assignment
+     */
+    public static Builder builder(SlayerMonsters monster, int min, int max, int weight) {
+        return new Builder(new SlayerAssignment(monster, min, max, weight));
+    }
+
     public static class Builder {
         private SlayerAssignment assignment;
 
         private Builder(SlayerAssignment assignment) {
             this.assignment = assignment;
-        }
-
-        /**
-         * Iniializes the assignment
-         * @param monster the monster
-         * @param min the minimum amount of assignment
-         * @param max the maximum amount of assignment
-         * @param weight the weight of the assignment
-         */
-        public static Builder monster(SlayerMonsters monster, int min, int max, int weight) {
-            return new Builder(new SlayerAssignment(monster, min, max, weight));
         }
 
         public Builder extend(int min, int max) {

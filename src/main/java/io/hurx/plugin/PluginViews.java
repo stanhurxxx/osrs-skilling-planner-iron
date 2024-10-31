@@ -7,7 +7,8 @@ import io.hurx.models.views.View;
 import io.hurx.models.views.Views;
 
 /**
- * All the views
+ * Represents all the views available in the Ironman Skilling Planner plugin.
+ * Each view is associated with a name and an icon path.
  */
 public enum PluginViews implements Views {
     Overview("Overview", IconPaths.SkillOverall),
@@ -34,33 +35,76 @@ public enum PluginViews implements Views {
     Strength("Strength", IconPaths.SkillStrength),
     Thieving("Thieving", IconPaths.SkillThieving),
     Woodcutting("Woodcutting", IconPaths.SkillWoodcutting),
-    LoggedOut("Woodcutting", IconPaths.SkillEHP),
-    ;
+    LoggedOut("LoggedOut", IconPaths.SkillEHP);
 
-    public Views getParent() {
-        return null;
-    }
-
-    public String getName() {
-        return name;
-    }
+    /** 
+     * The name of the view.
+     */
     private final String name;
 
-    public IconPaths getIconPath() {
-        return iconPath;
-    }
+    /** 
+     * The icon path associated with the view.
+     */
     private final IconPaths iconPath;
 
+    /**
+     * Constructs a PluginViews enum constant with the specified name and icon path.
+     *
+     * @param name the name of the view.
+     * @param iconPath the icon path associated with the view.
+     */
     PluginViews(String name, IconPaths iconPath) {
         this.name = name;
         this.iconPath = iconPath;
     }
 
+    /**
+     * Constructs a PluginViews enum constant with the specified name, icon path, 
+     * and additional elements. This constructor is currently unused and can be
+     * removed or implemented as needed.
+     *
+     * @param name the name of the view.
+     * @param iconPath the icon path associated with the view.
+     * @param elements additional elements associated with the view.
+     */
     PluginViews(String name, IconPaths iconPath, List<View.Element> elements) {
         this.name = name;
         this.iconPath = iconPath;
+        // Note: elements are not stored; consider implementing this if needed.
     }
 
+    /**
+     * Gets the parent view of this view.
+     * 
+     * @return null, as this implementation does not have parent views.
+     */
+    public Views getParent() {
+        return null;
+    }
+
+    /**
+     * Gets the name of the view.
+     *
+     * @return the name of the view.
+     */
+    public String getName() {
+        return name;
+    }
+
+    /**
+     * Gets the icon path associated with the view.
+     *
+     * @return the icon path of the view.
+     */
+    public IconPaths getIconPath() {
+        return iconPath;
+    }
+
+    /**
+     * Returns a string representation of the view, which is its name.
+     *
+     * @return the name of the view.
+     */
     @Override
     public String toString() {
         return name;
