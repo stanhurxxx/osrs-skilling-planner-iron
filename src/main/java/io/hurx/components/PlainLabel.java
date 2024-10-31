@@ -1,8 +1,11 @@
 package io.hurx.components;
-import javax.swing.*;
-import java.awt.*;
 
-import io.hurx.Theme;
+import java.awt.Font;
+
+import javax.swing.BorderFactory;
+import javax.swing.JLabel;
+
+import io.hurx.utils.Theme;
 
 public class PlainLabel extends JLabel {
     /**

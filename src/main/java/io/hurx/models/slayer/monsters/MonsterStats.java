@@ -2,7 +2,6 @@ package io.hurx.models.slayer.monsters;
 
 import java.util.List;
 import java.util.ArrayList;
-import javax.swing.ImageIcon;
 
 import io.hurx.models.items.LootItem;
 
@@ -17,7 +16,7 @@ public class MonsterStats {
         return lootItems;
     }
 
-    private List<LootItem> lootItems = new ArrayList();
+    private List<LootItem> lootItems = new ArrayList<>();
 
     public boolean getSlayerTower() {
         return slayerTower;

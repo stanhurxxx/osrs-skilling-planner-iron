@@ -27,6 +27,7 @@ public enum Skills {
     Strength("Strength", IconPaths.SkillStrength),
     Thieving("Thieving", IconPaths.SkillThieving),
     Woodcutting("Woodcutting", IconPaths.SkillWoodcutting),
+    Melee("Melee", IconPaths.CombatStyleControlled),
     ;
 
     public String getName() {

@@ -1,46 +1,26 @@
 package io.hurx.components;
 
-import javax.swing.*;
-
-import io.hurx.Resources;
-import io.hurx.SkillingPlannerPanel;
-import io.hurx.Theme;
-import io.hurx.models.Skills;
-import io.hurx.models.View;
 import io.hurx.models.items.Items;
-import io.hurx.views.slayer.SlayerView;
-import io.hurx.views.slayer.components.targetXP.TargetXPTable;
+import io.hurx.utils.Theme;
 
 import java.util.List;
 import java.util.ArrayList;
-import javax.swing.table.*;
-import java.awt.*;
+import java.awt.Point;
 import java.text.NumberFormat;
 import java.util.Locale;
+
+import javax.swing.JLabel;
+import javax.swing.JTable;
+import javax.swing.SwingConstants;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+
 import io.hurx.components.table.defaultTable.DefaultTable;
 
 public class LootTable extends DefaultTable {
     public final static int ICONS_PER_ROW = 5;
     public final static int H_PADDING = 10;
     public final static int V_PADDING = 10;
-
-    /**
-     * Get the panel
-     * @return
-     */
-    public SkillingPlannerPanel getPanel() {
-        return panel;
-    }
-
-    /**
-     * The ref to the main panel
-     */
-    private SkillingPlannerPanel panel;
-
-    /**
-     * The slayer view
-     */
-    private View view;
 
     /**
      * The item names
@@ -52,10 +32,8 @@ public class LootTable extends DefaultTable {
      */
     private List<Icon> icons;
 
-    public LootTable(View view) {
+    public LootTable() {
         super(DefaultTable.Options.Builder.construct().columnCount(ICONS_PER_ROW).build());
-        this.view = view;
-        this.panel = view.getPanel();
         LootTable table = this;
         DefaultTableModel model = (DefaultTableModel)this.getModel();
         for (int i = 0; i < ICONS_PER_ROW; i ++) {

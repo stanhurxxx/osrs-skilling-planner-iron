@@ -53,4 +53,30 @@ public class Duradel extends SlayerMaster {
             }
         );
     }
+
+    @Override
+    public float calculateAveragePointsPerTask() {
+        float points = 0;;
+        for (int i = 1; i <= 1000; i ++) {
+            if (i % 1000 == 0) {
+                points += 750;
+            }
+            else if (i % 250 == 0) {
+                points += 525;
+            }
+            else if (i % 100 == 0) {
+                points += 375;
+            }
+            else if (i % 50 == 0) {
+                points += 225;
+            }
+            else if (i % 10 == 0) {
+                points += 75;
+            }
+            else {
+                points += 15;
+            }
+        }
+        return points / 1000;
+    }
 }

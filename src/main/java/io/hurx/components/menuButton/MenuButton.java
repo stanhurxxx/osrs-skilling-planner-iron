@@ -2,11 +2,11 @@ package io.hurx.components.menuButton;
 
 import javax.swing.JPanel;
 
-import io.hurx.Resources;
-import io.hurx.Theme;
-import io.hurx.models.MenuIcons;
+import io.hurx.models.MenuButtons;
+import io.hurx.utils.Resources;
+import io.hurx.utils.Theme;
 
-import java.awt.*;
+import java.awt.Graphics;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
@@ -20,10 +20,10 @@ public abstract class MenuButton extends JPanel {
      * The icon
      * @return
      */
-    public MenuIcons getIcon() {
+    public MenuButtons getIcon() {
         return icon;
     }
-    private MenuIcons icon;
+    private MenuButtons icon;
 
     /**
      * Set the horizontal padding
@@ -45,7 +45,7 @@ public abstract class MenuButton extends JPanel {
 
     private ImageIcon imageIcon;
 
-    public MenuButton(MenuIcons icon) {
+    public MenuButton(MenuButtons icon) {
         MenuButton button = this;
         this.icon = icon;
         this.imageIcon = Resources.loadImageIcon(icon.getIconPath().getPath(), 512, 512);

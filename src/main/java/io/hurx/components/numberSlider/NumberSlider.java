@@ -1,12 +1,11 @@
 package io.hurx.components.numberSlider;
 
-import javax.swing.*;
+import javax.swing.JComponent;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
-import io.hurx.Theme;
+import io.hurx.utils.Theme;
 
-import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;

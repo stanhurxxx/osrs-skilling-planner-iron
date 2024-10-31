@@ -6,8 +6,9 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.Component;
 
+import io.hurx.components.comboBox.JComboBoxCellEditor;
 import io.hurx.components.table.defaultTable.DefaultTable;
-import io.hurx.views.slayer.SlayerView.ComboBoxModel;
+import io.hurx.old.SlayerView.ComboBoxModel;
 
 public class MultiComboBox extends DefaultTable {
     public JComboBox<?>[] getControls() {

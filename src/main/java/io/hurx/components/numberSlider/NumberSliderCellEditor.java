@@ -1,8 +1,10 @@
 package io.hurx.components.numberSlider;
 
-import javax.swing.*;
-import java.awt.*;
+import javax.swing.AbstractCellEditor;
+import javax.swing.JTable;
 import javax.swing.table.TableCellEditor;
+
+import java.awt.Component;
 
 import java.util.EventObject;
 import java.util.List;

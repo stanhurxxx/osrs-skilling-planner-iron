@@ -1,11 +1,13 @@
 package io.hurx.components;
 
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics;
+
 import javax.swing.ImageIcon;
 import javax.swing.JPanel;
 
-import io.hurx.Theme;
-
-import java.awt.*;
+import io.hurx.utils.Theme;
 
 /**
  * The Icon component

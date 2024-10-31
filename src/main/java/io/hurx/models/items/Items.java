@@ -1,7 +1,5 @@
 package io.hurx.models.items;
 
-import java.util.concurrent.ExecutionException;
-
 public enum Items {
     // Alchs
     AirBattlestaff(Item.Builder.id(1397).type(ItemType.Alch).build()),
@@ -256,7 +254,9 @@ public enum Items {
     CrystalShard(Item.Builder.id(23962).build()),
 
     // Meta
-    MorytaniaLegs4(Item.Builder.id(13115).type(ItemType.Meta).build())
+    MorytaniaLegs4(Item.Builder.id(13115).type(ItemType.Meta).build()),
+    SlayerCape(Item.Builder.id(9786).type(ItemType.Meta).build()),
+    WesternBanner4(Item.Builder.id(13144).type(ItemType.Meta).build()),
     ;
 
     /**

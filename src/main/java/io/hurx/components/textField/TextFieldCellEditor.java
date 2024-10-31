@@ -1,10 +1,13 @@
 package io.hurx.components.textField;
 
-import javax.swing.*;
-import javax.swing.table.*;
 import java.awt.Component;
 
 import java.util.EventObject;
+
+import javax.swing.AbstractCellEditor;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.table.TableCellEditor;
 
 public class TextFieldCellEditor extends AbstractCellEditor implements TableCellEditor  {
     private JTextField textField;

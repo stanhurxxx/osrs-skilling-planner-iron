@@ -1,12 +1,11 @@
 package io.hurx.components;
-import javax.swing.*;
-import java.awt.*;
 
-import io.hurx.Theme;
+import io.hurx.components.comboBox.JComboBoxCellEditor;
 import io.hurx.components.menuButton.MenuButton;
 import io.hurx.components.menuButton.MenuButtonCellEditor;
 import io.hurx.components.table.defaultTable.DefaultTable;
 import io.hurx.components.textField.TextFieldCellEditor;
+import io.hurx.utils.Theme;
 
 import javax.swing.table.DefaultTableModel;
 import java.util.List;
@@ -14,6 +13,14 @@ import java.util.ArrayList;
 import java.util.EventObject;
 import java.awt.event.MouseEvent;
 
+import javax.swing.BorderFactory;
+import java.awt.Component;
+import java.awt.Font;
+
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JTable;
+import javax.swing.JTextField;
 import javax.swing.table.DefaultTableCellRenderer;
 
 public class TitleLabel extends DefaultTable {
@@ -29,10 +36,31 @@ public class TitleLabel extends DefaultTable {
 
     private JTextField textField;
 
-    private void setNoBottomPadding() {
-        this.noBottomPadding = true;
+    public boolean isTopPaddingEnabled() {
+        return topPadding;
     }
-    private boolean noBottomPadding = false;
+    public TitleLabel enableTopPadding() {
+        this.topPadding = true;
+        return this;
+    }
+    public TitleLabel disableTopPadding() {
+        this.topPadding = false;
+        return this;
+    }
+    private boolean topPadding = false;
+
+    public boolean isBottomPaddingEnabled() {
+        return this.bottomPadding;
+    }
+    public TitleLabel enableBottomPadding() {
+        this.bottomPadding = true;
+        return this;
+    }
+    public TitleLabel disableBottomPadding() {
+        this.bottomPadding = false;
+        return this;
+    }
+    private boolean bottomPadding = true;
 
     /**
      * The other columns
@@ -49,7 +77,6 @@ public class TitleLabel extends DefaultTable {
         super(DefaultTable.Options.Builder.construct().columnCount(1).build());
         this.label = new JLabel(text);
         this.otherColumns = new Component[] {};
-        this.noBottomPadding = false;
         fillTableModel();
         initialize();
     }
@@ -58,7 +85,6 @@ public class TitleLabel extends DefaultTable {
         super(DefaultTable.Options.Builder.construct().columnCount(1).build());
         this.label = new JLabel(text);
         this.otherColumns = new Component[] {};
-        this.noBottomPadding = noBottomPadding;
         fillTableModel();
         initialize();
     }
@@ -75,7 +101,6 @@ public class TitleLabel extends DefaultTable {
         super(DefaultTable.Options.Builder.construct().columnCount(1 + otherColumns.length).build());
         this.label = new JLabel(text);
         this.otherColumns = otherColumns;
-        this.noBottomPadding = noBottomPadding;
         fillTableModel();
         initialize();
     }
@@ -92,7 +117,6 @@ public class TitleLabel extends DefaultTable {
         super(DefaultTable.Options.Builder.construct().columnCount(1).build());
         this.textField = text;
         this.otherColumns = new Component[] {};
-        this.noBottomPadding = noBottomPadding;
         fillTableModel();
         initialize();
     }
@@ -109,7 +133,6 @@ public class TitleLabel extends DefaultTable {
         super(DefaultTable.Options.Builder.construct().columnCount(1 + otherColumns.length).build());
         this.textField = text;
         this.otherColumns = otherColumns;
-        this.noBottomPadding = noBottomPadding;
         fillTableModel();
         initialize();
     }
@@ -125,9 +148,11 @@ public class TitleLabel extends DefaultTable {
             this.textField.setFont(new Font("Arial", Font.BOLD, Theme.TITLE_SIZE));
             this.textField.setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 0));
         }
-        setRowHeight(0, Theme.TITLE_V_PADDING - 3);
+        if (topPadding) {
+            setRowHeight(0, Theme.TITLE_V_PADDING - 3);
+        }
         setRowHeight(1, Theme.TITLE_SIZE + 6);
-        if (!noBottomPadding) {
+        if (bottomPadding) {
             setRowHeight(2, Theme.TITLE_V_PADDING - 3);
         }
         for (int i = 0; i < getColumnCount(); i ++) {
@@ -231,9 +256,11 @@ public class TitleLabel extends DefaultTable {
         for (int i = 0; i < otherColumns.length; i ++) {
             cells.add(otherColumns[i]);
         }
-        model.addRow(new Object[] {});
+        if (topPadding) {
+            model.addRow(new Object[] {});
+        }
         model.addRow(cells.toArray());
-        if (!noBottomPadding) {
+        if (bottomPadding) {
             model.addRow(new Object[] {});
         }
     }

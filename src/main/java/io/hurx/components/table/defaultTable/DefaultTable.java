@@ -3,7 +3,7 @@ package io.hurx.components.table.defaultTable;
 import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
 
-import io.hurx.Theme;
+import io.hurx.utils.Theme;
 
 public class DefaultTable extends JTable {
     protected DefaultTable.Options options;

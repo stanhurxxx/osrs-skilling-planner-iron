@@ -55,4 +55,30 @@ public class Nieve extends SlayerMaster {
             }
         );
     }
+
+    @Override
+    public float calculateAveragePointsPerTask() {
+        float points = 0;;
+        for (int i = 1; i <= 1000; i ++) {
+            if (i % 1000 == 0) {
+                points += 600;
+            }
+            else if (i % 250 == 0) {
+                points += 420;
+            }
+            else if (i % 100 == 0) {
+                points += 300;
+            }
+            else if (i % 50 == 0) {
+                points += 180;
+            }
+            else if (i % 10 == 0) {
+                points += 60;
+            }
+            else {
+                points += 12;
+            }
+        }
+        return points / 1000;
+    }
 }

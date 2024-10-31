@@ -11,10 +11,12 @@ public abstract class SlayerMaster {
     public SlayerAssignment[] getAssignments() {
         return assignments;
     }
-
+    
     protected SlayerAssignment[] assignments;
-
+    
     public SlayerMaster(SlayerAssignment[] assignments) {
         this.assignments = assignments;
     }
+
+    public abstract float calculateAveragePointsPerTask();
 }

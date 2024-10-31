@@ -1,11 +1,13 @@
 package io.hurx.components;
 
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics;
+
 import javax.swing.JPanel;
 
-import io.hurx.Theme;
-import io.hurx.util.ColorUtils;
-
-import java.awt.*;
+import io.hurx.utils.Colors;
+import io.hurx.utils.Theme;
 
 /**
  * The Icon component
@@ -28,7 +30,7 @@ public class ProgressBar extends JPanel {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         // Draw the background
-        g.setColor(ColorUtils.mergeColors(Theme.TABLE_BG_COLOR_DANGER, Theme.TABLE_BG_COLOR_SUCCESS, value));
+        g.setColor(Colors.mergeColors(Theme.TABLE_BG_COLOR_DANGER, Theme.TABLE_BG_COLOR_SUCCESS, value));
         g.fillRect(0, 0, (int)Math.round(getWidth() * value / 100), getHeight());
         
         // Draw the percentage text

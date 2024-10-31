@@ -19,8 +19,14 @@ public class LootItem {
 
     private final int maxAmount;
 
+    public Float getDropRateQuantifier() {
+        return dropRateQuantifier;
+    }
     private Float dropRateQuantifier;
 
+    public float getDropRateRate() {
+        return dropRateRate;
+    }
     private Float dropRateRate;
 
     public LootItem(Items item, int amount) {
