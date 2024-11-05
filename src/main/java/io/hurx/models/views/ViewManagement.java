@@ -160,7 +160,7 @@ public class ViewManagement {
                 }
                 return null;
             }
-            
+        
             /**
              * Retrieves the repository associated with this {@code Master}.
              *
@@ -169,7 +169,7 @@ public class ViewManagement {
             public final TRepository getRepository() {
                 return repository;
             }
-            private final TRepository repository;
+            private TRepository repository;
 
             /**
              * Retrieves the list of containers managed by this {@code Master}.
@@ -250,15 +250,6 @@ public class ViewManagement {
                 this.repository = repository;
                 this.viewsEnum = viewsEnum;
                 this.viewProperty = viewProperty;
-                Repository.Property.Listener<TEnum> listener = new Repository.Property.Listener<TEnum>() {
-                    public void onSet(TEnum oldValue, TEnum newValue) {
-                        for (Runnable runnable : onChangeViewRunnables) {
-                            runnable.run();
-                        }
-                        getRoot().render();
-                    }
-                };
-                this.viewProperty.listen(listener);
             }
 
             /**
@@ -509,15 +500,6 @@ public class ViewManagement {
              */
             public void oneToMany(OneToMany oneToMany) {
                 oneToManyRelations.add(oneToMany);
-                Repository.Property.Listener<String> listener = new Repository.Property.Listener<String>() {
-                    public void onSet(String oldValue, String newValue) {
-                        for (Runnable runnable : onOneToManySelectionChangesRunnables) {
-                            runnable.run();
-                        }
-                        getRoot().render();
-                    }
-                };
-                oneToMany.uuidProperty.listen(listener);
             }
 
             /**
@@ -628,6 +610,10 @@ public class ViewManagement {
                                     oneToMany.uuidProperty.replace(null);
                                 }
                                 repository.save();
+                                for (Runnable runnable : onChangeViewRunnables) {
+                                    runnable.run();
+                                }
+                                getRoot().render();
                                 System.out.println("Repository saved.");
                             }
                         }
@@ -639,6 +625,10 @@ public class ViewManagement {
                             if (currentUuid == null || !currentUuid.equals(newFileName)) {
                                 selectedOption.getOneToMany().getUuidProperty().replace(newFileName);
                                 repository.save();
+                                for (Runnable runnable : onChangeViewRunnables) {
+                                    runnable.run();
+                                }
+                                getRoot().render();
                             }
                         }
                     }

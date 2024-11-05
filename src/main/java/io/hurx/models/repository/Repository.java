@@ -225,10 +225,10 @@ public abstract class Repository<R extends Repository<?>> {
         if (fileName == null) return; // Exit if the file name is invalid
 
         try {
+            Json.objectMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
+
             // Serialize the repository to JSON
-            ObjectMapper objectMapper = Json.objectMapper.copy();
-            objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
-            String jsonString = objectMapper.writeValueAsString(this);
+            String jsonString = Json.objectMapper.writeValueAsString(this);
 
             // Write the JSON string to a file
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(new File(fileName + ".json")))) {
@@ -256,6 +256,39 @@ public abstract class Repository<R extends Repository<?>> {
             throw new PlayerNotLoggedInException("Could not load player, player is offline.");
         }
 
+        // Already existing repository
+        if (Injects.getRepositoriesByFileName().containsKey(getFileName())) {
+            // Update all many to one relations
+            for (Field field : getClass().getDeclaredFields()) {
+                if (field.isAnnotationPresent(ManyToOne.class)) {
+                    // Repository.Property.List<Repository<?>> list = 
+                    if (field.getType() == Repository.Property.Map.class) {
+                        try {
+                            @SuppressWarnings("unchecked")
+                            Repository.Property.Map<String, Repository<?>> map = (Repository.Property.Map<String, Repository<?>>)field.get(this);
+                            for (String key : map.value.keySet()) {
+                                Property<Repository<?>> property = map.value.get(key);
+                                property.get().initialize();
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    else if (field.getType() == Repository.Property.List.class) {
+                        try {
+                            @SuppressWarnings("unchecked")
+                            Repository.Property.List<Repository<?>> list = (Repository.Property.List<Repository<?>>)field.get(this);
+                            for (Property<Repository<?>> property : list.values()) {
+                                property.get().initialize();
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
+        }
+
         // Check if the JSON file exists
         if (new File(fileName + ".json").exists()) {
             String input = "";
@@ -268,7 +301,8 @@ public abstract class Repository<R extends Repository<?>> {
             }
             try {
                 @SuppressWarnings("unchecked")
-                Repository<R> data = Json.objectMapper.readValue(input, getClass());
+                Repository<R> data = Json.objectMapper.readValue(new File(fileName + ".json"), getClass());
+                Json.objectMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
                 if (data == null) return this;
 
                 // Existing; Deserialize each field

@@ -16,7 +16,6 @@ import net.runelite.client.ui.DynamicGridLayout;
  * dynamic rendering of views and components based on the plugin state.
  */
 public class PluginPanel extends net.runelite.client.ui.PluginPanel {
-    
     /**
      * A list that maintains the hierarchy of master views, starting from the deepest nested master view.
      */
@@ -90,6 +89,10 @@ public class PluginPanel extends net.runelite.client.ui.PluginPanel {
         masterHierarchy.clear();
         if (!ready) return;
 
+        reloadRepositories();
+        for (Runnable runnable : getPlugin().getMaster().getOnChangeViewRunnables()) {
+            runnable.run();
+        }
         List<JComponent> toBeRendered = new ArrayList<>();
         findComponentsToBeRendered(toBeRendered);
         List<JComponent> rendered = new ArrayList<>();
@@ -101,6 +104,52 @@ public class PluginPanel extends net.runelite.client.ui.PluginPanel {
         }
         revalidate();
         repaint();
+    }
+
+    /**
+     * Reloads all repositories in the plugin's master entity.
+     */
+    public void reloadRepositories() {
+        reloadRepositoriesInMaster(getPlugin().getMaster());
+    }
+
+    /**
+     * Recursively reloads repositories in the specified master entity.
+     *
+     * @param master the master entity from which to reload repositories
+     */
+    private void reloadRepositoriesInMaster(ViewManagement.Entity.Master<?, ?> master) {
+        master.getRepository().initialize(); // Initialize the repository associated with the master entity.
+        for (ViewManagement.Entity.Container<?, ?, ?> container : master.getContainers()) {
+            reloadRepositoriesInContainer(container); // Reload repositories in each container of the master.
+        }
+        for (ViewManagement.Entity.View<?, ?, ?> view : master.getViews()) {
+            reloadRepositoriesInView(view); // Reload repositories in each view associated with the master.
+        }
+    }
+
+    /**
+     * Reloads repositories in the specified container.
+     *
+     * @param container the container from which to reload repositories
+     */
+    private void reloadRepositoriesInContainer(ViewManagement.Entity.Container<?, ?, ?> container) {
+        for (ViewManagement.Entity.Element element : container.getElements()) {
+            if (element instanceof ViewManagement.Entity.Master) {
+                reloadRepositoriesInMaster((ViewManagement.Entity.Master<?, ?>) element); // Recursively reload repositories if the element is a master.
+            }
+        }
+    }
+
+    /**
+     * Reloads repositories in the specified view.
+     *
+     * @param view the view from which to reload repositories
+     */
+    private void reloadRepositoriesInView(ViewManagement.Entity.View<?, ?, ?> view) {
+        for (ViewManagement.Entity.Container<?, ?, ?> container : view.getContainers()) {
+            reloadRepositoriesInContainer(container); // Reload repositories in each container of the view.
+        }
     }
 
     /**
@@ -120,7 +169,7 @@ public class PluginPanel extends net.runelite.client.ui.PluginPanel {
      */
     private void findComponentsToBeRenderedInMaster(List<JComponent> toBeRendered, ViewManagement.Entity.Master<?, ?> master) {
         if (master == null) return;
-        
+
         ViewManagement.Entity.View<?, ?, ?> view = master.getActiveView();
         masterHierarchy.add(master);
 
