@@ -1,6 +1,7 @@
 package io.hurx.plugin.slayer;
 
 import io.hurx.models.IconPaths;
+import io.hurx.models.views.Views;
 
 /**
  * Represents all the views available in the Slayer plugin.
@@ -9,7 +10,7 @@ import io.hurx.models.IconPaths;
  * providing a name and an icon path for each view.
  * </p>
  */
-public enum SlayerViews {
+public enum SlayerViews implements Views {
     /**
      * Overview view, displaying a general summary of Slayer tasks.
      */

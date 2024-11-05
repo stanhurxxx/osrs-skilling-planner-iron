@@ -6,17 +6,36 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 
 import io.hurx.models.repository.exceptions.RepositoryFileCorruptedException;
+import io.hurx.annotations.ManyToOne;
+import io.hurx.models.IconPaths;
 import io.hurx.models.repository.exceptions.PlayerNotLoggedInException;
 import io.hurx.plugin.Plugin;
+import io.hurx.utils.Injects;
+import io.hurx.utils.Json;
 
 /**
  * Abstract class representing a repository for managing cached data.
@@ -24,10 +43,16 @@ import io.hurx.plugin.Plugin;
  * @param <R> The type of the repository that extends this class.
  */
 public abstract class Repository<R extends Repository<?>> {
+    @JsonIgnore
+    public <T extends Repository<?>> T get(Class<T> clazz, String fileName) {
+        return null;
+    }
+
     /**
      * The directory where the cache is stored.
      */
-    public final static File CACHE_DIR = new File(Plugin.HOME_DIR, "Ironman Skilling Planner");
+    @JsonIgnore
+    public final static File CACHE_DIR = new File(Plugin.HOME_DIR.getAbsolutePath());
 
     @JsonIgnore
     private R parent; // Reference to the parent repository
@@ -36,6 +61,27 @@ public abstract class Repository<R extends Repository<?>> {
 
     @JsonIgnore
     protected Plugin plugin; // Reference to the associated Plugin instance
+
+    /**
+     * Whether the repository is validated, for in combo boxes.
+     */
+    public boolean isValidated() {
+        return true;
+    }
+
+    /**
+     * Gets the icon path for the repository for in combo boxes.
+     */
+    public IconPaths getIconPath() {
+        return null;
+    }
+
+    /**
+     * Default to string function for in combo boxes.
+     */
+    public String toString() {
+        return fileName;
+    }
 
     /**
      * Gets the parent repository.
@@ -54,6 +100,14 @@ public abstract class Repository<R extends Repository<?>> {
      */
     public String getFileName() {
         return fileName;
+    }
+
+    /**
+     * Gets the dir segment before the file name
+     * @return
+     */
+    public String getDirName() {
+        return null;
     }
 
     /**
@@ -80,6 +134,8 @@ public abstract class Repository<R extends Repository<?>> {
         return plugin; // Will be null if no Plugin is found
     }
 
+    public abstract Repository<R> initialize();
+
     /**
      * Constructs a new Repository with the specified parent and file name.
      *
@@ -87,8 +143,10 @@ public abstract class Repository<R extends Repository<?>> {
      * @param fileName The file name associated with this repository.
      */
     public Repository(R parent, String fileName) {
+        this();
         this.parent = parent;
         this.fileName = fileName;
+        this.plugin = parent.getPlugin();
     }
 
     /**
@@ -98,9 +156,60 @@ public abstract class Repository<R extends Repository<?>> {
      * @param path The path for the repository.
      */
     public Repository(Plugin plugin, String path) {
+        this();
         this.parent = null; // No parent in this case
         this.fileName = path;
         this.plugin = plugin;
+    }
+
+    /**
+     * Inititializes the (de)serializer for this repository into the
+     * global objectMapper.
+     */
+    private Repository() {
+        SimpleModule module = new SimpleModule();
+        module.addDeserializer(getClass(), new Deserializer<>());
+        module.addSerializer(getClass(), new Serializer<>());
+        Json.objectMapper.registerModule(module);
+    }
+
+    /**
+     * Static function to create a repository based on a class and a filename. If it throws an exception, something is wrong with the code.
+     * @param clazz the class
+     * @param fileName the filename
+     * @return the repository, or null if failed.
+     */
+    public static Repository<?> createRepositoryFromFileName(Class<?> clazz, String fileName) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+        Repository<?> instance = null;
+        Constructor<?> constructor = null;
+        if (fileName != null) {
+            for (Constructor<?> c : clazz.getDeclaredConstructors()) {
+                if (c.getParameters().length == 2 && Repository.class.isAssignableFrom(c.getParameters()[0].getType()) && c.getParameters()[1].getType() == String.class) {
+                    // priority
+                    constructor = c;
+                }
+            }
+        }
+        if (constructor == null) {
+            for (Constructor<?> c : clazz.getDeclaredConstructors()) {
+                if (c.getParameters().length == 1 && Repository.class.isAssignableFrom(c.getParameters()[0].getType())) {
+                    constructor = c;
+                }
+                else if (c.getParameters().length == 1 && Plugin.class.isAssignableFrom(c.getParameters()[0].getType())) {
+                    constructor = c;
+                }
+            }
+            if (constructor == null) {
+                return null;
+            }
+            else {
+                instance = (Repository<?>)constructor.newInstance(Injects.getInjectableValues().get(constructor.getParameters()[0].getType()));
+            }
+        }
+        else {
+            instance = (Repository<?>)constructor.newInstance(Injects.getInjectableValues().get(constructor.getParameters()[0].getType()), fileName);
+        }
+        return (Repository<?>)instance;
     }
 
     /**
@@ -109,15 +218,13 @@ public abstract class Repository<R extends Repository<?>> {
      * @throws PlayerNotLoggedInException When the player is not found.
      */
     public void save() {
-        ObjectMapper objectMapper = new ObjectMapper();
         String fileName = generatePath(); // Generate the path for the cache file
 
         if (fileName == null) return; // Exit if the file name is invalid
 
         try {
             // Serialize the repository to JSON
-            String jsonString = objectMapper.writeValueAsString(this);
-            CACHE_DIR.mkdirs(); // Create the cache directory if it does not exist
+            String jsonString = Json.objectMapper.writeValueAsString(this);
 
             // Write the JSON string to a file
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(new File(fileName + ".json")))) {
@@ -137,9 +244,8 @@ public abstract class Repository<R extends Repository<?>> {
      * @throws RepositoryFileCorruptedException When the cache file is corrupted.
      * @throws IOException When the cache file cannot be opened.
      */
-    public void load() throws PlayerNotLoggedInException, RepositoryFileCorruptedException, IOException {
-        ObjectMapper objectMapper = new ObjectMapper();
-        String fileName = getFileName(); // Get the file name to load
+    public Repository<R> load() throws PlayerNotLoggedInException, RepositoryFileCorruptedException, IOException {
+        String fileName = generatePath(); // Get the file name to load
 
         if (fileName == null) {
             System.out.println("Could not load player, player is offline.");
@@ -157,36 +263,104 @@ public abstract class Repository<R extends Repository<?>> {
                 throw e; // Rethrow any IO exceptions
             }
             try {
-                // Deserialize the JSON data into an object of this class
-                Object data = objectMapper.readValue(input, getClass());
+                @SuppressWarnings("unchecked")
+                Repository<R> data = Json.objectMapper.readValue(input, getClass());
+                if (data == null) return this;
 
-                // Loop through all declared fields to update properties
-                for (Field field : getClass().getDeclaredFields()) {
-                    field.setAccessible(true); // Make private fields accessible
-
-                    Object newValue = field.get(data);
-                    Object oldValue = field.get(this);
-
-                    // If the fields are instances of Property, update them
-                    if (newValue instanceof Property && oldValue instanceof Property) {
-                        @SuppressWarnings("unchecked")
-                        Property<Object> newProperty = (Property<Object>) newValue;
-                        @SuppressWarnings("unchecked")
-                        Property<Object> oldProperty = (Property<Object>) oldValue;
-
-                        Field value = Property.class.getDeclaredField("value");
-                        if (value == null) throw new Exception("Someone removed the value property from the Repository.Property class.");
-
-                        // Update the property value, firing the listeners
-                        oldProperty.set(newProperty.get());
+                // Existing; Deserialize each field
+                if (Injects.getRepositoriesByFileName().containsKey(data.getFileName())) {
+                    @SuppressWarnings("unchecked")
+                    Repository<R> existing = (Repository<R>)Injects.getRepositoriesByFileName().get(data.getFileName());
+                    for (Field field : existing.getClass().getDeclaredFields()) {
+                        deserializeField(field, data, this);
                     }
+                    return existing;
+                }
+                // New; Add the new repository to the map
+                else {
+                    Injects.getRepositoriesByFileName().put(data.getFileName(), data);
+                    return data;
                 }
             } catch (Exception e) {
                 e.printStackTrace();
                 throw new RepositoryFileCorruptedException(); // Throw if an error occurs during loading
             }
         } else {
-            System.out.println("No previous user input found."); // Log if no previous data exists
+            throw new IOException("No previous user input found."); // Log if no previous data exists
+        }
+    }
+
+    /**
+     * Deserializes a field based on a new value, into the old value.
+     * @param field the field
+     * @param objectNew the new object
+     * @param objectCurrent the current object
+     */
+    @SuppressWarnings("unchecked")
+    protected void deserializeField(Field field, Object objectNew, Object objectCurrent) {
+        try {
+            field.setAccessible(true);
+            Object valueNew = field.get(objectNew);
+            Object valueCurrent = field.get(objectCurrent);
+            
+            // Get the generic type args if any
+            Type[] typeArgs = new Type[] {};
+            Type genericType = field.getGenericType();
+            if (genericType instanceof ParameterizedType) {
+                typeArgs = ((ParameterizedType) genericType).getActualTypeArguments();
+            }
+
+            // Null value
+            if (valueNew == null) {
+                // Also null
+                if (valueCurrent == null) {
+                    return;
+                }
+                // Property
+                else if (valueCurrent instanceof Property) {
+                    Property<?> propertyCurrent = (Property<?>) valueCurrent;
+                    propertyCurrent.replace(null);
+                }
+                // Set null
+                else {
+                    field.set(objectCurrent, null);
+                }
+            }
+            // Lists
+            else if (valueNew instanceof Property.List) {
+                Property.List<Object> listCurrent = (Property.List<Object>) valueCurrent;
+                Property.List<Object> listNew = (Property.List<Object>) valueNew;
+                listCurrent.replace(listNew);
+            }
+            // Maps
+            else if (valueNew instanceof Property.Map) {
+                Property.Map<Object, Object> mapCurrent = (Property.Map<Object, Object>) valueCurrent;
+                Property.Map<Object, Object> mapNew = (Property.Map<Object, Object>) valueNew;
+                mapCurrent.replace(mapNew);
+            }
+            // Properties
+            else if (valueNew instanceof Property) {
+                Property<Object> propertyNew = (Property<Object>) valueNew;
+                Property<Object> propertyCurrent = (Property<Object>) valueCurrent;
+
+                if (typeArgs.length > 0 && typeArgs[0] instanceof Class<?>) {
+                    Type genericTypeParameter = typeArgs[0];
+                    propertyCurrent.replace(Json.objectMapper.convertValue(propertyNew.get(), (Class<?>)genericTypeParameter));
+                }
+                else {
+                    throw new Exception("No generic type in property.");
+                }
+            }
+            // Other
+            else {
+                field.set(objectNew, valueCurrent);
+            }
+        } catch (IllegalArgumentException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -205,19 +379,36 @@ public abstract class Repository<R extends Repository<?>> {
         // Use "development" as the account hash in development mode
         if (isDevelopment) accountHash = "development";
 
-        String path = this.fileName; // Start with the current file name
+        String dirName = this.getDirName();
+        String path = dirName == null
+            ? ""
+            : dirName + "/"; // Start with the current file name
         Repository<?> parent = this.getParent(); // Get the parent repository
 
         // Construct the full path by traversing up the parent hierarchy
         while (parent != null) {
-            path = parent.getFileName() + "/" + path;
+            String parentDirName = parent.getDirName();
+            path = parentDirName == null
+                ? parent.getFileName() + "/" + path
+                : parentDirName + "/" + parent.getFileName() + "/" + path;
             parent = parent.getParent();
         }
 
+        // Create the parent directories.
+        new File(CACHE_DIR, "/" + accountHash + "/" + path).mkdirs();
+
         // Combine the path with the cache directory and account hash
-        path = CACHE_DIR + "/" + accountHash + "/" + path;
+        path = new File(CACHE_DIR, "/" + accountHash + "/" + path + "/" + fileName).getAbsolutePath();
 
         return path; // Return the complete generated path
+    }
+
+    /**
+     * Helper function to get the Repository.class in the deserializer.
+     * @return
+     */
+    public Class<?> getClazz() {
+        return getClass();
     }
 
     /**
@@ -225,10 +416,13 @@ public abstract class Repository<R extends Repository<?>> {
      *
      * @param <V> The type of the value stored in this Property.
      */
+    @JsonSerialize(using = Property.Serializer.class)
+    @JsonDeserialize(using = Property.Deserializer.class)
     public static class Property<V> {
         protected V value; // The current value of the property
 
         // A list of listeners that are notified when the property's value changes
+        @JsonIgnore
         private final java.util.List<Listener<V>> listeners = new ArrayList<>();
 
         /**
@@ -255,14 +449,25 @@ public abstract class Repository<R extends Repository<?>> {
          *
          * @param value The new value to set.
          */
+        @SuppressWarnings("unchecked")
         @JsonIgnore
-        public void set(V value) {
-            V oldValue = this.value; // Store the old value
-            this.value = value; // Update the property with the new value
-
-            // Notify all listeners of the value change
-            for (Listener<V> listener : listeners) {
-                listener.onSet(oldValue, value); // Call onSet method of each listener
+        public void replace(V value) {
+            if (value instanceof Property.Map) {
+                ((Property.Map<Object, Object>)this.value).replace((Property.Map<Object, Object>)value);
+            }
+            else if (value instanceof Property.List) {
+                ((Property.List<Object>)this.value).replace((Property.List<Object>)value);
+            }
+            else if (value instanceof Property) {
+                ((Property<Object>)this.value).replace((Property<Object>)value);
+            }
+            else {
+                V oldValue = this.value; // Store the old value
+                this.value = value; // Update the property with the new value
+                // Notify all listeners of the value change
+                for (Listener<V> listener : listeners) {
+                    listener.onSet(oldValue, value); // Call onSet method of each listener
+                }
             }
         }
 
@@ -287,14 +492,20 @@ public abstract class Repository<R extends Repository<?>> {
             }
         }
 
+        @JsonIgnore
+        public Class<?> getClazz() {
+            return getClass();
+        }
+
         /**
          * A generic class representing a list that extends the Property class.
          * This class can hold a list of values and notify listeners of changes to the list.
          *
          * @param <V> The type of the values contained in this list.
          */
-        public static class List<V> extends Property<java.util.List<V>> {
+        public static class List<V> extends Property<java.util.List<Property<V>>> {
             // A list of listeners that are notified when changes occur to the list
+            @JsonIgnore
             private final java.util.List<Listener<V>> listeners = new ArrayList<>();
 
             /**
@@ -308,127 +519,60 @@ public abstract class Repository<R extends Repository<?>> {
                 return this; // Return this instance for method chaining
             }
 
-            /**
-             * Replaces the current list with another list and notifies listeners of changes.
-             *
-             * @param with The List to replace the current list with.
-             * @throws IOException If there is an error during the replacement process.
-             */
-            public void replace(List<V> with) throws IOException {
-                java.util.List<V> oldValue = this.value; // Store the old value
-                java.util.List<V> newValue = with.value; // Get the new value from the provided list
-                java.util.List<V> replacementValue = new ArrayList<>(); // Store values for the new list
-                java.util.List<Runnable> onDone = new ArrayList<>(); // Actions to perform after replacement
-                java.util.List<Runnable> onEnd = new ArrayList<>(); // Actions to perform at the end
+            @SuppressWarnings("unchecked")
+            public void replace(List<V> with) {
+                java.util.List<Property<V>> currentValue = this.value;
+                java.util.List<Property<V>> newValue = with.value;
 
-                for (int i = 0; i < Math.max(oldValue.size(), newValue.size()); i++) {
-                    V oldValueEntry = (i < oldValue.size()) ? oldValue.get(i) : null; // Get the old value entry
-                    V newValueEntry = (i < newValue.size()) ? newValue.get(i) : null; // Get the new value entry
+                for (int i = Math.max(currentValue.size(), newValue.size()) - 1; i >= 0; i --) {
+                    Property<V> currentEntry = i < currentValue.size() ? currentValue.get(i) : null;
+                    Property<V> newEntry = i < newValue.size() ? newValue.get(i) : null;
 
-                    // Handle both old and new values
-                    if (oldValueEntry != null && newValueEntry != null) {
-                        ObjectMapper objectMapper = new ObjectMapper();
-
-                        // Check if entries are lists and replace recursively
-                        if (oldValueEntry instanceof Property.List && newValueEntry instanceof Property.List) {
-                            @SuppressWarnings("unchecked")
-                            Property.List<V> oldList = (Property.List<V>) oldValueEntry;
-                            @SuppressWarnings("unchecked")
-                            Property.List<V> newList = (Property.List<V>) newValueEntry;
-                            oldList.replace(newList);
-                        } 
-                        // Check if entries are maps and replace recursively
-                        else if (oldValueEntry instanceof Property.Map && newValueEntry instanceof Property.Map) {
-                            @SuppressWarnings("unchecked")
-                            Property.Map<Object, Object> oldMap = (Property.Map<Object, Object>) oldValueEntry;
-                            @SuppressWarnings("unchecked")
-                            Property.Map<Object, Object> newMap = (Property.Map<Object, Object>) newValueEntry;
-                            oldMap.replace(newMap);
-                        } 
-                        // Handle generic Property objects
-                        else if (oldValueEntry instanceof Property && newValueEntry instanceof Property) {
-                            String serializedOld = objectMapper.writeValueAsString(oldValueEntry);
-                            String serializedNew = objectMapper.writeValueAsString(newValueEntry);
-                            // Skip replacement if they are equal
-                            if (serializedOld.equals(serializedNew)) {
-                                continue; // Skip further processing
+                    if (currentEntry != null) {
+                        if (newEntry != null) {
+                            // On replace
+                            if (currentEntry instanceof Property.Map && newEntry instanceof Property.Map) {
+                                ((Property.Map<Object, Object>)currentEntry).replace((Property.Map<Object, Object>)newEntry);
                             }
-                            int foundIndex = -1; // Track the found index for replacements
-                            // Find the index of the new value in the list
-                            for (int j = 0; j < with.value.size(); j++) {
-                                String serializedNew2 = objectMapper.writeValueAsString(newValue.get(j));
-                                if (serializedNew2.equals(serializedNew)) {
-                                    foundIndex = j; // Found matching index
-                                    int index = j;
-                                    onDone.add(() -> {
-                                        replacementValue.remove(index);
-                                        replacementValue.add(oldValue.get(index)); // Restore the old value
-                                    });
-                                    break; // Exit the loop
-                                }
+                            else if (currentEntry instanceof Property.List && newEntry instanceof Property.List) {
+                                ((Property.List<Object>)currentEntry).replace((Property.List<Object>)newEntry);
                             }
-                            // Notify listeners of changes
-                            for (Listener<V> listener : this.listeners) {
-                                if (foundIndex != -1) {
-                                    int index = i;
-                                    onEnd.add(() -> {
-                                        listener.onChange(index, null, oldValueEntry, newValueEntry);
-                                    });
-                                } else {
-                                    int index = i;
-                                    onEnd.add(() -> {
-                                        listener.onRemove(index, oldValueEntry);
-                                    });
-                                }
+                            else if (currentEntry instanceof Property && newEntry instanceof Property) {
+                                ((Property<Object>)currentEntry).replace(((Property<Object>)newEntry).get());   
                             }
-                            replacementValue.add(newValueEntry); // Add the new value
-                        } else {
-                            // Handle old values that are lists or maps and notify listeners
-                            if (oldValueEntry instanceof Property.List) {
-                                onEnd.add(() -> {
-                                    @SuppressWarnings("unchecked")
-                                    Property.List<Object> entry = (Property.List<Object>) oldValueEntry;
-                                    entry.onRemove(null, null); // Notify removal
-                                });
-                            } else if (oldValueEntry instanceof Property.Map) {
-                                onEnd.add(() -> {
-                                    Property.Map<?, ?> entry = (Property.Map<?, ?>) oldValueEntry;
-                                    entry.onDelete(); // Notify deletion
-                                });
-                            } else if (oldValueEntry instanceof Property) {
-                                onEnd.add(() -> {
-                                    Property<?> entry = (Property<?>) oldValueEntry;
-                                    entry.onDelete(); // Notify deletion
-                                });
+                            for (Listener<V> listener : listeners) {
+                                listener.onChange(currentEntry, i, i, currentEntry.get(), newEntry.get());
                             }
-                            replacementValue.add(newValue.get(i)); // Add new value
                         }
-                    } else if (newValue.size() > i) {
-                        // Handle case where only new value exists
-                        replacementValue.add(newValue.get(i));
-                    } else if (oldValue.size() > i) {
-                        // Handle case where only old value exists
-                        if (oldValueEntry instanceof Property.List) {
-                            ((Property.List<?>) oldValueEntry).onDelete(); // Notify deletion
-                        } else if (oldValueEntry instanceof Property.Map) {
-                            ((Property.Map<?, ?>) oldValueEntry).onDelete(); // Notify deletion
-                        } else if (oldValueEntry instanceof Property) {
-                            ((Property<?>) oldValueEntry).onDelete(); // Notify deletion
+                        else {
+                            // On delete
+                            this.remove(i);
                         }
                     }
+                    else if (newEntry != null) {
+                        // On add
+                        this.add(newEntry.get());
+                    }
                 }
+            }
 
-                // Notify all listeners that the list has been set
-                for (Listener<V> listener : listeners) {
-                    listener.onSet(this, with);
+            /**
+             * Checks whether the list contains one or multiple values
+             * @param values the values
+             * @return true if it contains all values
+             */
+            public final boolean contains(@SuppressWarnings("unchecked") V... values) {
+                for (V value : values) {
+                    boolean found = false;
+                    for (Property<V> property : this.value) {
+                        if (property.get() == value || property.get().equals(value)) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) return false;
                 }
-                // Execute deferred actions
-                for (Runnable runnable : onDone) {
-                    runnable.run();
-                }
-                for (Runnable runnable : onEnd) {
-                    runnable.run();
-                }
+                return true;
             }
 
             /**
@@ -442,11 +586,12 @@ public abstract class Repository<R extends Repository<?>> {
                 java.util.List<Runnable> onDone = new ArrayList<>(); // Actions to perform after adding values
                 for (V value : values) {
                     int index = this.value.size(); // Index at which to add the value
-                    this.value.add(value); // Add the value
+                    this.value.add(new Property<>(value)); // Add the value
                     // Notify listeners of the addition
                     for (Listener<V> listener : listeners) {
+                        int i = index;
                         onDone.add(() -> {
-                            listener.onAdd(index, value); // Notify listener of addition
+                            listener.onAdd(this.value.get(i), i, value); // Notify listener of addition
                         });
                     }
                 }
@@ -460,28 +605,18 @@ public abstract class Repository<R extends Repository<?>> {
             /**
              * Removes an item at the specified index from the list and notifies listeners.
              *
-             * @param index The index of the item to remove.
+             * @param indices The index of the item to remove.
              * @return This List instance for method chaining.
              */
-            @SuppressWarnings("unchecked")
-            public List<V> remove(int index) {
-                java.util.List<Runnable> onDone = new ArrayList<>(); // Actions to perform after removal
-                if (this.value.size() > index) {
-                    V value = this.value.get(index); // Get the value to remove
-                    this.value.remove(index); // Remove the value
-                    // Notify listeners based on the type of the removed value
-                    if (value instanceof Property.List) {
-                        ((Property.List<V>) value).onRemove(index, value); // Notify removal
-                    } else if (value instanceof Property.Map) {
-                        Property.Map<Object, Object> map = (Property.Map<Object, Object>) value;
-                        map.onRemove((Object) index, (Property<Object>) value); // Notify removal
-                    }
+            public List<V> remove(int ...indices) {
+                java.util.List<V> toRemove = new ArrayList<>();
+                for (int index : indices) {
+                    toRemove.add(this.value.get(index).get());
                 }
-                // Execute deferred actions
-                for (Runnable runnable : onDone) {
-                    runnable.run();
+                for (V v : toRemove) {
+                    this.remove(v);
                 }
-                return this; // Return this instance for method chaining
+                return this;
             }
 
             /**
@@ -490,9 +625,9 @@ public abstract class Repository<R extends Repository<?>> {
              * @param index The index of the removed item.
              * @param value The value of the removed item.
              */
-            public void onRemove(Integer index, V value) {
+            public void onRemove(Property<V> property, Integer index, V value) {
                 for (Listener<V> listener : listeners) {
-                    listener.onRemove(index, value); // Notify listener of removal
+                    listener.onRemove(property, index, value); // Notify listener of removal
                 }
             }
 
@@ -526,13 +661,13 @@ public abstract class Repository<R extends Repository<?>> {
                 java.util.List<Runnable> onDone = new ArrayList<>(); // Actions to perform after removal
                 for (V value : values) {
                     for (int i = 0; i < this.value.size(); i++) {
-                        V oldValue = this.value.get(i); // Get current value
+                        Property<V> oldValue = this.value.get(i); // Get current value
                         // Check if the current value matches the value to remove
-                        if (oldValue != value && !oldValue.equals(value)) continue; 
+                        if (oldValue.get() == null || (oldValue.get() != value && !oldValue.get().equals(value))) continue; 
                         this.value.remove(i); // Remove the value
                         int index = i;
                         onDone.add(() -> {
-                            this.onRemove(index, oldValue); // Notify removal
+                            this.onRemove(oldValue, index, oldValue.get()); // Notify removal
                         });
                     }
                 }
@@ -567,9 +702,8 @@ public abstract class Repository<R extends Repository<?>> {
             @JsonIgnore
             public List<V> set(int index, V value) throws JsonProcessingException {
                 if (index < this.value.size()) {
-                    V oldValue = this.value.get(index); // Store the old value
-                    this.value.remove(index); // Remove the old value
-                    this.value.add(index, value); // Add the new value
+                    V oldValue = this.value.get(index).get(); // Store the old value
+                    this.value.get(index).replace(value);
                     // Notify listeners of the removal and addition
                     if (oldValue instanceof Property.List) {
                         ((Property.List<?>) oldValue).onDelete(); // Notify deletion
@@ -579,8 +713,7 @@ public abstract class Repository<R extends Repository<?>> {
                         ((Property<?>) oldValue).onDelete(); // Notify deletion
                     }
                     for (Listener<V> listener : listeners) {
-                        listener.onRemove(index, oldValue); // Notify listener of removal
-                        listener.onAdd(index, value); // Notify listener of addition
+                        listener.onChange(this.value.get(index), index, index, oldValue, value);
                     }
                 }
                 return this; // Return this instance for method chaining
@@ -600,21 +733,21 @@ public abstract class Repository<R extends Repository<?>> {
                     for (int i = 0; i < values.length; i++) {
                         V value = values[i]; // Get value to insert
                         if (this.value.size() > index + i) {
-                            V oldValue = this.value.get(index + i); // Store old value at the index
-                            this.value.add(index + i, value); // Insert the new value
+                            V oldValue = this.value.get(index + i).get(); // Store old value at the index
+                            this.value.add(index + i, new Property<>(value)); // Insert the new value
                             // Notify listeners of the change
                             for (Listener<V> listener : listeners) {
                                 int ii = i;
                                 onDone.add(() -> {
-                                    listener.onChange(index + ii, index + ii + 1, oldValue, value);
+                                    listener.onChange(this.value.get(index + ii), index + ii, index + ii + 1, oldValue, value);
                                 });
                             }
                         } else {
-                            this.value.add(value); // Add the new value at the end
+                            this.value.add(new Property<>(value)); // Add the new value at the end
                             for (Listener<V> listener : listeners) {
-                                int ii = i;
+                                int ii = this.value.size() - 1;
                                 onDone.add(() -> {
-                                    listener.onAdd(index + ii, value); // Notify listener of addition
+                                    listener.onAdd(this.value.get(ii), ii, this.value.get(ii).get()); // Notify listener of addition
                                 });
                             }
                         }
@@ -634,7 +767,7 @@ public abstract class Repository<R extends Repository<?>> {
              * @return The value at the specified index, or null if the index is out of bounds.
              */
             @JsonIgnore
-            public V get(int index) {
+            public Property<V> get(int index) {
                 for (int i = 0; i < value.size(); i++) {
                     if (i == index) {
                         return value.get(i); // Return the value at the index
@@ -651,25 +784,25 @@ public abstract class Repository<R extends Repository<?>> {
              * @return The value at the specified index, or the default value.
              */
             @JsonIgnore
-            public V get(int index, V defaultValue) {
-                V get = this.get(index); // Retrieve the value at the index
-                return get == null ? defaultValue : get; // Return default value if not found
+            public Property<V> get(int index, V defaultValue) {
+                Property<V> get = this.get(index); // Retrieve the value at the index
+                return get == null ? new Property<>(defaultValue) : get; // Return default value if not found
             }
 
-            /**
-             * Returns an unmodifiable view of the values contained in the list.
-             *
-             * @return An unmodifiable list of values.
-             */
-            public java.util.List<V> values() {
-                return java.util.List.copyOf(value); // Return a copy of the list
+            public java.util.List<Property<V>> values() {
+                return value;
             }
 
             /**
              * Constructs a new List with an empty ArrayList as its initial value.
              */
+            @SuppressWarnings({ "rawtypes", "unchecked" })
             public List() {
-                super(new ArrayList<>()); // Initialize the property with an empty list
+                super(new ArrayList<Property<V>>()); // Initialize the property with an empty list
+                SimpleModule module = new SimpleModule();
+                module.addDeserializer((Class<Property.List<V>>)getClass(), new Deserializer());
+                module.addSerializer((Class<Property.List<V>>)getClass(), new Serializer());
+                Json.objectMapper.registerModule(module);
             }
 
             /**
@@ -678,16 +811,40 @@ public abstract class Repository<R extends Repository<?>> {
              * @param <V> The type of values in the List.
              */
             public static abstract class Listener<V> {
-                public void onChange(Integer oldKey, Integer newKey, V oldValue, V newValue) {} // Notifies change
-                
-                public void onAdd(int key, V newValue) {} // Notifies addition
-                
-                public void onRemove(int key, V oldValue) {} // Notifies removal
-                
+                /**
+                 * A property has been changed in the list
+                 * @param property the property
+                 * @param oldKey old index
+                 * @param newKey new index
+                 * @param oldValue old value
+                 * @param newValue new value
+                 */
+                public void onChange(Property<V> property, Integer oldKey, Integer newKey, V oldValue, V newValue) {} // Notifies change
+
+                /**
+                 * When a property has been added to the list
+                 * @param property the property
+                 * @param key the index
+                 * @param newValue the value
+                 */
+                public void onAdd(Property<V> property, int key, V newValue) {} // Notifies addition
+
+                /**
+                 * A property from the list was removed
+                 * @param property the old property
+                 * @param key the index
+                 * @param oldValue the old value
+                 */
+                public void onRemove(Property<V> property, int key, V oldValue) {} // Notifies removal
+
+                /**
+                 * The list has been cleared
+                 */
                 public void onClear() {} // Notifies clearing of the list
-                
-                public void onSet(List<V> oldList, List<V> newList) {} // Notifies setting of a new list
-                
+
+                /**
+                 * The entire list has been deleted
+                 */
                 public void onDelete() {} // Notifies deletion of the list
             }
         }
@@ -701,6 +858,10 @@ public abstract class Repository<R extends Repository<?>> {
          * @param <V> the type of mapped values
          */
         public static class Map<K, V> extends Property<HashMap<K, Property<V>>> {
+            /**
+             * The event listeners
+             */
+            @JsonIgnore
             protected final java.util.List<Listener<K, V>> listeners = new ArrayList<>();
 
             /**
@@ -715,116 +876,46 @@ public abstract class Repository<R extends Repository<?>> {
                 return this;
             }
 
-            /**
-             * Replaces the current map values with those from the specified map. Listeners are 
-             * notified of any changes to entries, including additions, removals, and updates.
-             * 
-             * @param with the map containing new values to replace the current map
-             * @throws IOException if serialization fails when comparing values
-             */
-            public void replace(Map<K, V> with) throws IOException {
-                java.util.Map<K, Property<V>> oldValue = this.value;
+            @SuppressWarnings("unchecked")
+            public void replace(Map<K, V> with) {
+                java.util.Map<K, Property<V>> currentValue = this.value;
                 java.util.Map<K, Property<V>> newValue = with.value;
-                java.util.Map<K, Property<V>> replacementValue = new HashMap<>();
-                java.util.List<Runnable> onDone = new ArrayList<>();
-                java.util.List<Runnable> onEnd = new ArrayList<>();
                 java.util.List<K> keys = new ArrayList<>();
 
                 // Collect unique keys from both old and new values
-                for (K key : oldValue.keySet()) {
+                for (K key : currentValue.keySet()) {
                     if (!keys.contains(key)) keys.add(key);
                 }
                 for (K key : newValue.keySet()) {
                     if (!keys.contains(key)) keys.add(key);
                 }
 
+                // Loop through keys
                 for (K key : keys) {
-                    // Obtain entries for each key in old and new maps
-                    @SuppressWarnings("unchecked")
-                    V oldValueEntry = (V) oldValue.get(key);
-                    @SuppressWarnings("unchecked")
-                    V newValueEntry = (V) newValue.get(key);
-
-                    // Handle both old and new values present for the same key
-                    if (oldValue.containsKey(key) && newValue.containsKey(key)) {
-                        ObjectMapper objectMapper = new ObjectMapper();
-
-                        // Handle List-type property updates
-                        if (oldValueEntry instanceof Property.List && newValueEntry instanceof Property.List) {
-                            @SuppressWarnings("unchecked")
-                            Property.List<V> oldList = (Property.List<V>) oldValueEntry;
-                            @SuppressWarnings("unchecked")
-                            Property.List<V> newList = (Property.List<V>) newValueEntry;
-                            oldList.replace(newList);
-                        }
-                        // Handle Map-type property updates
-                        else if (oldValueEntry instanceof Property.Map && newValueEntry instanceof Property.Map) {
-                            @SuppressWarnings("unchecked")
-                            Property.Map<Object, Object> oldMap = (Property.Map<Object, Object>) oldValueEntry;
-                            @SuppressWarnings("unchecked")
-                            Property.Map<Object, Object> newMap = (Property.Map<Object, Object>) newValueEntry;
-                            oldMap.replace(newMap);
-                        }
-                        // Handle generic Property updates with serialization checks
-                        else if (oldValueEntry instanceof Property && newValueEntry instanceof Property) {
-                            String serializedOld = objectMapper.writeValueAsString(oldValueEntry);
-                            String serializedNew = objectMapper.writeValueAsString(newValueEntry);
-                            if (serializedOld.equals(serializedNew)) continue;
-
-                            K foundIndex = null;
-                            for (K j : with.value.keySet()) {
-                                String serializedNew2 = objectMapper.writeValueAsString(newValue.get(j));
-                                if (serializedNew2.equals(serializedNew)) {
-                                    foundIndex = j;
-                                    K index = j;
-                                    onDone.add(() -> {
-                                        replacementValue.remove(index);
-                                        replacementValue.put(index, oldValue.get(index));
-                                    });
-                                    break;
-                                }
+                    if (currentValue.containsKey(key)) {
+                        if (newValue.containsKey(key)) {
+                            // Replace
+                            Property<V> currentProperty = currentValue.get(key);
+                            Property<V> newProperty = newValue.get(key);
+                            if (currentProperty instanceof Property.Map && newProperty instanceof Property.Map) {
+                                ((Property.Map<Object, Object>)currentProperty).replace(((Property.Map<Object, Object>)newProperty).get());
                             }
-
-                            // Notify listeners of entry changes
-                            for (Listener<K, V> listener : this.listeners) {
-                                if (foundIndex != null) {
-                                    K index = key;
-                                    onEnd.add(() -> listener.onChange(index, null, oldValueEntry, newValueEntry));
-                                } else {
-                                    K index = key;
-                                    onEnd.add(() -> listener.onRemove(index, oldValueEntry));
-                                }
+                            else if (currentProperty instanceof Property.List && newProperty instanceof Property.List) {
+                                ((Property.List<Object>)currentProperty).replace(((Property.List<Object>)newProperty).get());
                             }
-                            replacementValue.put(key, new Property<>(newValueEntry));
+                            else if (currentProperty instanceof Property && newProperty instanceof Property) {
+                                ((Property<Object>)currentProperty).replace(((Property<Object>)newProperty).get());
+                            } 
+                        }
+                        else {
+                            // Remove
+                            this.onRemove(key, currentValue.get(key));
                         }
                     }
-                    // Add new values to the map and notify listeners
-                    else if (newValue.containsKey(key)) {
-                        replacementValue.put(key, newValue.get(key));
+                    else {
+                        // Add
+                        this.set(key, currentValue.get(key).get());
                     }
-                    // Remove old values from the map if not in new map
-                    else if (oldValue.containsKey(key)) {
-                        if (oldValueEntry instanceof Property.List) {
-                            ((Property.List<?>) oldValueEntry).onDelete();
-                        } else if (oldValueEntry instanceof Property.Map) {
-                            ((Property.Map<?, ?>) oldValueEntry).onDelete();
-                        } else if (oldValueEntry instanceof Property) {
-                            ((Property<?>) oldValueEntry).onDelete();
-                        }
-                    }
-                }
-
-                // Notify listeners of the full map replacement
-                for (Listener<K, V> listener : listeners) {
-                    listener.onSet(this, with);
-                }
-
-                // Execute stored actions
-                for (int i = 0; i < onDone.size(); i++) {
-                    onDone.get(i).run();
-                }
-                for (int i = 0; i < onEnd.size(); i++) {
-                    onEnd.get(i).run();
                 }
             }
 
@@ -859,7 +950,7 @@ public abstract class Repository<R extends Repository<?>> {
              */
             public void onRemove(K property, Property<V> value) {
                 for (Listener<K, V> listener : listeners) {
-                    listener.onRemove(property, value.get());
+                    listener.onRemove(value, property, value.get());
                 }
             }
 
@@ -919,23 +1010,28 @@ public abstract class Repository<R extends Repository<?>> {
             @JsonIgnore
             public Map<K, V> set(K property, V newValue) {
                 boolean isNew = !this.value.containsKey(property);
-                Property<V> oldValue = this.value.get(property);
+                Property<V> oldProperty = this.value.get(property);
+                V oldValue = oldProperty == null ? null : oldProperty.get();
                 if (isNew) this.value.put(property, new Property<V>(newValue));
                 java.util.List<Runnable> onDone = new ArrayList<>();
 
-                if (oldValue instanceof Property.List) {
-                    ((Property.List<?>) oldValue).onDelete();
-                } else if (oldValue instanceof Property.Map) {
-                    ((Property.Map<?, ?>) oldValue).onDelete();
-                } else if (oldValue instanceof Property) {
-                    ((Property<?>) oldValue).onDelete();
+                if (oldProperty instanceof Property.List) {
+                    ((Property.List<?>) oldProperty).onDelete();
+                } else if (oldProperty instanceof Property.Map) {
+                    ((Property.Map<?, ?>) oldProperty).onDelete();
+                } else if (oldProperty instanceof Property) {
+                    ((Property<?>) oldProperty).onDelete();
                 }
 
                 // Notify listeners of addition or replacement of an entry
                 for (Listener<K, V> listener : listeners) {
                     if (listener == null) continue;
-                    if (!isNew) listener.onRemove(property, oldValue.get());
-                    listener.onAdd(property, newValue);
+                    if (!isNew) {
+                        listener.onChange(oldProperty, property, oldValue, newValue);
+                    }
+                    else {
+                        listener.onAdd(oldProperty, property, newValue);
+                    }
                 }
                 
                 // Execute deferred actions
@@ -991,8 +1087,13 @@ public abstract class Repository<R extends Repository<?>> {
             /**
              * Constructs an empty map with an internal {@link HashMap} to hold entries.
              */
+            @SuppressWarnings({ "unchecked", "rawtypes" })
             public Map() {
-                super(new HashMap<>());
+                super(new HashMap<K, Property<V>>());
+                SimpleModule module = new SimpleModule();
+                module.addDeserializer((Class<Property.Map<K, V>>)getClass(), new Deserializer());
+                module.addSerializer((Class<Property.Map<K, V>>)getClass(), new Serializer());
+                Json.objectMapper.registerModule(module);
             }
 
             /**
@@ -1003,24 +1104,13 @@ public abstract class Repository<R extends Repository<?>> {
              * @param <V> the type of mapped values
              */
             public static abstract class Listener<K, V> {
-
-                /**
-                 * Called when an entry in the map is updated with a new key or value.
-                 *
-                 * @param oldKey the previous key of the entry
-                 * @param newKey the new key of the entry
-                 * @param oldValue the previous value of the entry
-                 * @param newValue the new value of the entry
-                 */
-                public void onChange(K oldKey, K newKey, V oldValue, V newValue) {}
-
                 /**
                  * Called when a new entry is added to the map.
                  *
                  * @param key the key of the new entry
                  * @param newValue the value of the new entry
                  */
-                public void onAdd(K key, V newValue) {}
+                public void onAdd(Property<V> property, K key, V newValue) {}
 
                 /**
                  * Called when an entry is removed from the map.
@@ -1028,7 +1118,7 @@ public abstract class Repository<R extends Repository<?>> {
                  * @param key the key of the removed entry
                  * @param oldValue the value of the removed entry
                  */
-                public void onRemove(K key, V oldValue) {}
+                public void onChange(Property<V> property, K key, V oldValue, V newValue) {}
 
                 /**
                  * Called when all entries in the map are cleared.
@@ -1041,7 +1131,12 @@ public abstract class Repository<R extends Repository<?>> {
                  * @param oldMap the previous map instance
                  * @param newMap the new map instance
                  */
-                public void onSet(Map<K, V> oldMap, Map<K, V> newMap) {}
+                public void onReplace(Map<K, V> oldMap, Map<K, V> newMap) {}
+
+                /**
+                 * Called when a key in the map is removed.
+                 */
+                public void onRemove(Property<V> property, K key, V oldValue) {}
 
                 /**
                  * Called when the map itself is deleted, indicating a complete removal.
@@ -1073,6 +1168,258 @@ public abstract class Repository<R extends Repository<?>> {
              * has been removed or otherwise made obsolete.
              */
             public void onDelete() {}
+        }
+
+        /**
+         * The serializer for properties, lists and maps.
+         * @param <V>
+         */
+        public static class Serializer<V> extends JsonSerializer<Property<V>> {
+            @Override
+            public void serialize(Property<V> value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+                if (value != null) {
+                    gen.writeObject(value.value);
+                }
+                else {
+                    gen.writeNull();
+                }
+            }
+        }
+
+        /**
+         * The deserializer for properties, lists and maps.
+         * @param <V>
+         */
+        public static class Deserializer<V> extends JsonDeserializer<Property<V>> {
+            @SuppressWarnings({ "rawtypes", "unchecked" })
+            @Override
+            public Property<V> deserialize(JsonParser parser, DeserializationContext ctxt) throws IOException, JsonProcessingException {
+                // Read the JSON as a JsonNode
+                // try
+                JsonNode node = parser.getCodec().readTree(parser);
+                Field field = Json.getCurrentField();
+                if (field == null) {
+                    throw new IOException("Current field is empty, so there's a Repository.Property being deserialized, before a Repository is being deserialized. They can only be used within repositories.");
+                }
+
+                if (field.getType() == Repository.Property.Map.class) {
+                    Type gType = field.getGenericType();
+                    if (gType instanceof ParameterizedType) {
+                        ParameterizedType param = (ParameterizedType) gType;
+                        Type keyType = param.getActualTypeArguments()[0];
+                        Type valueType = param.getActualTypeArguments()[1];
+                        Map<Object, Object> map = new Map<>();
+                        ManyToOne manyToOne = field.isAnnotationPresent(ManyToOne.class)
+                            ? field.getAnnotation(ManyToOne.class)
+                            : null;
+                        if (node.isArray() && manyToOne != null) {
+                           for (JsonNode element : node) {
+                                try {
+                                    if (element.isObject()) {
+                                        Repository<?> repository = Repository.createRepositoryFromFileName(manyToOne.type(), element.get("fileName").asText()).initialize();
+                                        map.set(element.get("fileName").asText(), repository);
+                                    }
+                                    else if (element.isTextual()) {
+                                        Repository<?> repository = Repository.createRepositoryFromFileName(manyToOne.type(), element.asText()).initialize();
+                                        map.set(element.asText(), repository);
+                                    }
+                                } catch (Exception e) {
+                                    System.out.println("Couldn't instantiate repository.");
+                                    throw new RuntimeException(e);
+                                }
+                            }
+                        }
+                        else if (node.isObject()) {
+                            Iterator<java.util.Map.Entry<String, JsonNode>> iterator = node.fields();
+                            while (iterator.hasNext()) {
+                                java.util.Map.Entry<String, JsonNode> entry = iterator.next();
+                                map.set(
+                                    Json.objectMapper.readValue(entry.getKey(), TypeFactory.defaultInstance().constructType(keyType)),
+                                    Json.objectMapper.readValue(entry.getValue().traverse(Json.objectMapper), TypeFactory.defaultInstance().constructType(valueType))
+                                );
+                            }
+                        }
+                        return (Property<V>)map;
+                    }
+                }
+                else if (field.getType() == Repository.Property.List.class) {
+                    Type gType = field.getGenericType();
+                    if (gType instanceof ParameterizedType) {
+                        ParameterizedType param = (ParameterizedType) gType;
+                        Type type = param.getActualTypeArguments()[0];
+                        List<Object> list = new List<>();
+                        if (node.isArray()) {
+                            ManyToOne manyToOne = field.isAnnotationPresent(ManyToOne.class)
+                                ? field.getAnnotation(ManyToOne.class)
+                                : null;
+                            for (JsonNode element : node) {
+                                if (manyToOne == null) {
+                                    list.add(Json.objectMapper.readValue(element.traverse(Json.objectMapper), TypeFactory.defaultInstance().constructType(type)));
+                                }
+                                else {
+                                    try {
+                                        if (element.isObject()) {
+                                            list.add(Repository.createRepositoryFromFileName(manyToOne.type(), element.get("fileName").asText()).initialize());
+                                        }
+                                        else if (element.isTextual()) {
+                                            list.add(Repository.createRepositoryFromFileName(manyToOne.type(), element.asText()).initialize());
+                                        }
+                                    } catch (Exception e) {
+                                        System.out.println("Couldn't instantiate repository.");
+                                        throw new RuntimeException(e);
+                                    }
+                                }
+                            }
+                        }
+                        return (Property<V>)list;
+                    }
+                }
+                else if (field.getType() == Repository.Property.class) {
+                    try {
+                        Type gType = field.getGenericType();
+                        if (gType instanceof ParameterizedType) {
+                            ParameterizedType param = (ParameterizedType) gType;
+                            Type type = param.getActualTypeArguments()[0];
+                            Property<V> property = new Property(Json.objectMapper.readValue(node.traverse(Json.objectMapper), TypeFactory.defaultInstance().constructType(type)));
+                            return property;
+                        }
+                    }
+                    catch (Exception ex) {
+                        ex.printStackTrace();
+                        return null;
+                    }
+                }
+                return null;
+            }
+        }
+    }
+
+    /**
+     * The serializer for repositories.
+     * @param <V>
+     */
+    public static class Serializer<V extends Repository<?>> extends JsonSerializer<V> {
+        @SuppressWarnings("unchecked")
+        @Override
+        public void serialize(V value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+            if (value != null) {
+                // Start writing a JSON object
+                gen.writeStartObject();
+
+                Class<?> clazz = value.getClass();
+                while (clazz != null && clazz != clazz.getSuperclass()) {
+                    loop:
+                    for (Field field : clazz.getDeclaredFields()) {
+                        boolean log = false;
+                        try {
+                            if (field.isAnnotationPresent(JsonIgnore.class)) {
+                                continue loop;
+                            }
+                            if (field.isAnnotationPresent(ManyToOne.class)) {
+                                log = true;
+                                field.setAccessible(true);
+                                gen.writeFieldName(field.getName());
+                                gen.writeStartArray();
+                                Object fieldValue = field.get(value);
+                                if (fieldValue instanceof Repository.Property.List) {
+                                    for (Property<Repository<?>> v : ((Repository.Property.List<Repository<?>>) fieldValue).values()) {
+                                        // gen.writeStartObject();
+                                        gen.writeString(v.get().getFileName());
+                                        // gen.writeEndObject();
+                                    }
+                                }
+                                gen.writeEndArray();
+                                continue loop;
+                            } else {
+                                try {
+                                    // Get the value of the field from the object
+                                    Object fieldValue = field.get(value);
+
+                                    // Write the field name and its value to the JSON output
+                                    gen.writeFieldName(field.getName());
+                                    // Handle potential null values appropriately
+                                    if (fieldValue == null) {
+                                        gen.writeNull();
+                                    } else {
+                                        // Serialize the field value (uses the default serializer)
+                                        gen.writeObject(fieldValue);
+                                    }
+                                } catch (IllegalAccessException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        } catch (Exception ex) {
+                            if (log) ex.printStackTrace();
+                        }
+                    }
+                    clazz = clazz.getSuperclass();
+                }
+
+                // Finish writing the JSON object
+                gen.writeEndObject();
+            }
+            else {
+                gen.writeNull();
+            }
+        }
+    }
+
+    /**
+     * The deserializer for repositories
+     * @param <V>
+     */
+    public class Deserializer<V> extends JsonDeserializer<V> {        
+        @SuppressWarnings("unchecked")
+        @Override
+        public V deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {          
+            JsonNode node = p.getCodec().readTree(p);
+            V instance = null;
+            try {
+                instance = (V)Repository.createRepositoryFromFileName(getClazz(), node.has("fileName") ? node.get("fileName").asText() : null);
+            }
+            catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+
+            if (instance == null) return (V)instance;
+            if (node.isObject()) {
+                Iterator<java.util.Map.Entry<String, JsonNode>> fields = node.fields();
+
+                loop: while (fields.hasNext()) {
+                    java.util.Map.Entry<String, JsonNode> entry = fields.next();
+                    String name = entry.getKey();
+                    JsonNode value = entry.getValue();
+                    Class<?> nodeClazz = getClazz();
+                    Class<?> previousNodeClazz = null;
+                    while (nodeClazz != null && nodeClazz != previousNodeClazz) {
+                        try {
+                            // The declared field on the class
+                            Field field = nodeClazz.getDeclaredField(name);
+                            Json.setCurrentField(field);
+                            // Ignored
+                            if (field.isAnnotationPresent(JsonIgnore.class)) {
+                                continue loop;
+                            }
+                            // Null values
+                            if (value.isNull()) {
+                                field.set(instance, null);
+                                continue loop;
+                            }
+                            field.set(instance, Json.objectMapper.readValue(
+                                    value.traverse(Json.objectMapper),
+                                    field.getType()
+                            ));
+                            break;
+                        }
+                        catch (Exception ex) {
+                            // Field doesnt exist on (sub)type.
+                            previousNodeClazz = nodeClazz;
+                            nodeClazz = getClazz().getSuperclass();
+                        }
+                    }
+                }
+            }
+            return (V) instance;
         }
     }
 }

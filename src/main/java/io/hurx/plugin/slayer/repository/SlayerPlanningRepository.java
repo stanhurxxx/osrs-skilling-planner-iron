@@ -2,6 +2,8 @@ package io.hurx.plugin.slayer.repository;
 
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
+
 import io.hurx.models.repository.Repository;
 
 /**
@@ -12,6 +14,10 @@ import io.hurx.models.repository.Repository;
  * Repository class to provide structure for managing planning-related properties.
  */
 public class SlayerPlanningRepository extends Repository<SlayerRepository> {
+    @Override
+    public String getDirName() {
+        return "plannings";
+    }
 
     /** The file name for the list of Slayer planning data. */
     public Repository.Property<String> listFileName = new Repository.Property<String>(null);
@@ -30,7 +36,32 @@ public class SlayerPlanningRepository extends Repository<SlayerRepository> {
      *
      * @param repository the base SlayerRepository associated with this planning
      */
-    public SlayerPlanningRepository(SlayerRepository repository) {
-        super(repository, "plannings/" + UUID.randomUUID().toString());
+    public SlayerPlanningRepository(@JacksonInject SlayerRepository repository) {
+        super(repository, UUID.randomUUID().toString());
+    }
+
+    /**
+     * Constructs a new SlayerPlanningRepository instance, and specifies a fileName (uuid).
+     * @param repository repository
+     * @param fileName uuid
+     */
+    public SlayerPlanningRepository(@JacksonInject SlayerRepository repository, String fileName) {
+        super(repository, fileName);
+    }
+
+    @Override
+    public SlayerPlanningRepository initialize() {
+        try {
+            return (SlayerPlanningRepository)load();
+        }
+        catch (Exception ex) {
+            try {
+                save();
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return this;
     }
 }

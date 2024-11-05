@@ -23,20 +23,17 @@ import java.util.ArrayList;
 
 import javax.imageio.ImageIO;
 import java.io.File;
-import java.io.IOException;
 import javax.swing.ImageIcon;
-import io.hurx.models.repository.exceptions.PlayerNotLoggedInException;
-import io.hurx.models.repository.exceptions.RepositoryFileCorruptedException;
+
+import io.hurx.utils.Injects;
 
 /**
  * The main plugin class for the Ironman Skilling Planner.
- * This plugin manages the skilling planning features for Ironman accounts in the game.
+ * This plugin manages the skilling planning features for Ironman accounts in
+ * the game.
  */
 @Slf4j
-@PluginDescriptor(
-    name = "Ironman Skilling Planner",
-    description = "Plans your skilling for max or max xp on ironman."
-)
+@PluginDescriptor(name = "Ironman Skilling Planner", description = "Plans your skilling for max or max xp on ironman.")
 public class Plugin extends net.runelite.client.plugins.Plugin {
 
     /**
@@ -73,8 +70,8 @@ public class Plugin extends net.runelite.client.plugins.Plugin {
     public PluginMaster getMaster() {
         return master;
     }
-    
-    private PluginMaster master = new PluginMaster(this, new PluginRepository(this));
+
+    private PluginMaster master;
 
     /**
      * The info panel of the plugin.
@@ -84,8 +81,13 @@ public class Plugin extends net.runelite.client.plugins.Plugin {
     public PluginPanel getPanel() {
         return panel;
     }
-    
+
     private PluginPanel panel;
+
+    /**
+     * The account hash of the user
+     */
+    private Long accountHash = null;
 
     /**
      * Initializes the plugin and loads the necessary resources on startup.
@@ -107,29 +109,40 @@ public class Plugin extends net.runelite.client.plugins.Plugin {
                     item.getItem().setIcon(new ImageIcon(bufferedImage));
 
                     itemsLoading.remove(item);
-                    if (itemsLoading.size() == 0) {
+                    if (itemsLoading.isEmpty()) {
                         try {
-                            log.info("Skilling planner plugin started.");
+                            System.out.println("Skilling planner plugin started.");
+
+                            Injects.reset();
+                            Injects.setInjectable(Plugin.class, this);
+
+                            accountHash = client.getAccountHash();
+
                             this.panel = new PluginPanel(this);
+                            this.master = new PluginMaster(this.panel, new PluginRepository(this).initialize());
+                            
+                            this.panel.setReady(true);
+                            this.panel.render();
+
+                            // Force renew the view after initialization for the comboboxes and rendering to work properly
+                            this.master.getViewProperty().replace(this.master.getViewProperty().get());
 
                             NavigationButton button = NavigationButton.builder()
-                                .tooltip("Skilling planner")
-                                .icon(ImageIO.read(getClass().getResourceAsStream("/icons/panel-icon.png")))
-                                .panel(panel)
-                                .build();
+                                    .tooltip("Skilling planner")
+                                    .icon(ImageIO.read(getClass().getResourceAsStream("/icons/panel-icon.png")))
+                                    .panel(panel)
+                                    .build();
 
                             clientToolbar.addNavigation(button);
                             clientToolbar.openPanel(button);
                             client.getItemDefinition(5298).getInventoryModel();
-
-                            loadCache();
                         } catch (Exception ex) {
-                            log.info("Loading iron skiller plugin failed.");
+                            System.out.println("Loading iron skiller plugin failed.");
                             ex.printStackTrace();
                         }
                     }
                 });
-            }        
+            }
         });
     }
 
@@ -140,36 +153,35 @@ public class Plugin extends net.runelite.client.plugins.Plugin {
      */
     @Override
     protected void shutDown() throws Exception {
-        log.info("Skilling planner plugin stopped.");
+        System.out.println("Skilling planner plugin stopped.");
     }
 
     /**
-     * Handles the game state change events and updates the plugin state accordingly.
+     * Handles the game state change events and updates the plugin state
+     * accordingly.
      *
      * @param gameStateChanged the event containing the new game state.
      * @throws Exception if an error occurs during the state change handling.
      */
     @Subscribe
     public void onGameStateChanged(GameStateChanged gameStateChanged) throws Exception {
-        if (this.panel == null) {
-            return;
-        }
-        if (gameStateChanged.getGameState() == GameState.LOGGED_IN) {
-            clientThread.invoke(() -> {
+        clientThread.invoke(() -> {
+            if (this.panel == null) {
+                return;
+            }
+            if (client.getAccountHash() != accountHash) {
+                accountHash = client.getAccountHash();
+                this.master = new PluginMaster(this.panel, new PluginRepository(this));
+                this.panel.render();
+            }
+            if (gameStateChanged.getGameState() == GameState.LOGGED_IN) {
                 updateItems();
-            });
-            loadCache();
-        } else if (gameStateChanged.getGameState() == GameState.LOGIN_SCREEN) {
-            clientThread.invoke(() -> {
+            } else if (gameStateChanged.getGameState() == GameState.LOGIN_SCREEN) {
                 updateItems();
-            });
-            loadCache();
-        } else if (gameStateChanged.getGameState() == GameState.CONNECTION_LOST) {
-            clientThread.invoke(() -> {
+            } else if (gameStateChanged.getGameState() == GameState.CONNECTION_LOST) {
                 updateItems();
-            });
-            loadCache();
-        }
+            }
+        });
     }
 
     /**
@@ -185,12 +197,11 @@ public class Plugin extends net.runelite.client.plugins.Plugin {
             // Update noted id
             int notedId = itemManager.getItemComposition(definition.getId()).getLinkedNoteId();
             definition.setNotedId(
-                notedId == definition.getId() || notedId < 0 ? null : notedId
-            );
+                    notedId == definition.getId() || notedId < 0 ? null : notedId);
 
             // Update item price
             if (definition.getPriceItemId() != null) {
-                int price = itemManager.getItemPrice(definition.getPriceItemId()); 
+                int price = itemManager.getItemPrice(definition.getPriceItemId());
                 for (int subtractId : definition.getPriceItemComponentIds()) {
                     price -= itemManager.getItemPrice(subtractId);
                 }
@@ -198,24 +209,6 @@ public class Plugin extends net.runelite.client.plugins.Plugin {
             } else {
                 definition.setPrice(itemManager.getItemPrice(definition.getId()));
             }
-        }
-    }
-
-    /**
-     * Loads the plugin's cache and initializes the repository.
-     *
-     * @throws PlayerNotLoggedInException if the player is not logged in.
-     */
-    private void loadCache() throws PlayerNotLoggedInException {
-        try {
-            master.getRepository().load();
-            master.navigate(master.getRepository().view.get());
-        } catch (PlayerNotLoggedInException e) {
-            master.navigate(PluginViews.LoggedOut);
-        } catch (RepositoryFileCorruptedException e) {
-            master.navigate(PluginViews.LoggedOut);
-        } catch (IOException e) {
-            master.navigate(PluginViews.LoggedOut);
         }
     }
 }

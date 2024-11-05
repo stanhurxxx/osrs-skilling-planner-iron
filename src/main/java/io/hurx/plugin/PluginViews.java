@@ -1,9 +1,6 @@
 package io.hurx.plugin;
 
-import java.util.List;
-
 import io.hurx.models.IconPaths;
-import io.hurx.models.views.View;
 import io.hurx.models.views.Views;
 
 /**
@@ -35,7 +32,7 @@ public enum PluginViews implements Views {
     Strength("Strength", IconPaths.SkillStrength),
     Thieving("Thieving", IconPaths.SkillThieving),
     Woodcutting("Woodcutting", IconPaths.SkillWoodcutting),
-    LoggedOut("LoggedOut", IconPaths.SkillEHP);
+    LoggedOut(null, IconPaths.SkillEHP);
 
     /** 
      * The name of the view.
@@ -56,21 +53,6 @@ public enum PluginViews implements Views {
     PluginViews(String name, IconPaths iconPath) {
         this.name = name;
         this.iconPath = iconPath;
-    }
-
-    /**
-     * Constructs a PluginViews enum constant with the specified name, icon path, 
-     * and additional elements. This constructor is currently unused and can be
-     * removed or implemented as needed.
-     *
-     * @param name the name of the view.
-     * @param iconPath the icon path associated with the view.
-     * @param elements additional elements associated with the view.
-     */
-    PluginViews(String name, IconPaths iconPath, List<View.Element> elements) {
-        this.name = name;
-        this.iconPath = iconPath;
-        // Note: elements are not stored; consider implementing this if needed.
     }
 
     /**

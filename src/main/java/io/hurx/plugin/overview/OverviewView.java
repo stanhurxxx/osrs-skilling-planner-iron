@@ -1,6 +1,8 @@
 package io.hurx.plugin.overview;
 
-import io.hurx.models.views.View;
+import javax.swing.JLabel;
+
+import io.hurx.models.views.ViewManagement;
 import io.hurx.plugin.PluginMaster;
 import io.hurx.plugin.PluginRepository;
 import io.hurx.plugin.PluginViews;
@@ -13,7 +15,13 @@ import io.hurx.plugin.PluginViews;
  * relevant data to the user. It extends the base View class, utilizing
  * the plugin's master and repository for lifecycle management and data access.
  */
-public class OverviewView extends View<PluginMaster, PluginViews, PluginRepository> {
+public class OverviewView extends ViewManagement.Entity.View<PluginMaster, PluginRepository, PluginViews> {
+    @Override
+    public boolean isValidated() {
+        // TODO:
+        return true;
+    }
+    
     /**
      * Constructs a new OverviewView instance.
      *
@@ -21,6 +29,24 @@ public class OverviewView extends View<PluginMaster, PluginViews, PluginReposito
      */
     public OverviewView(PluginMaster master) {
         super(master, PluginViews.Overview);
+        addContainer(new Container(master));
+    }
+
+    /**
+     * The overview container
+     */
+    public static class Container extends ViewManagement.Entity.Container<PluginMaster, PluginRepository, PluginViews> {
+        public Container(PluginMaster master) {
+            super(master);
+            addElement(new SomeComponent(this));
+        }
+    }
+
+    // TODO: remove
+    public static class SomeComponent extends ViewManagement.Entity.Component<PluginMaster, PluginRepository, PluginViews> {
+        public SomeComponent(Container container) {
+            super(container, new JLabel("Overview!"));
+        }
     }
 
     // @Override

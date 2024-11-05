@@ -8,7 +8,6 @@ import java.awt.Component;
 
 import io.hurx.components.comboBox.JComboBoxCellEditor;
 import io.hurx.components.table.defaultTable.DefaultTable;
-import io.hurx.old.SlayerView.ComboBoxModel;
 
 /**
  * The MultiComboBox class represents a custom table component that allows 
@@ -48,6 +47,7 @@ public class MultiComboBox extends DefaultTable {
     public MultiComboBox(JComboBox<?>[] controls, DefaultTable.Options options) {
         super(options);
         this.controls = controls;
+        fillTableModel();
     }
 
     /**
@@ -114,7 +114,9 @@ public class MultiComboBox extends DefaultTable {
             // Return JComboBox if the value is an instance of JComboBox
             if (value instanceof JComboBox) {
                 return (JComboBox<?>) value;
-            } else if (value instanceof ComboBoxModel) {
+            } 
+            // When the option is a view
+            else {
                 JComboBox<?> box = thisTable.controls[column];
                 if (box == null) {
                     return null;
@@ -122,7 +124,6 @@ public class MultiComboBox extends DefaultTable {
                 box.setSelectedItem(value); // Set the selected item in the JComboBox
                 return box;
             }
-            return null; // Return null if value does not match expected types
         }
     }
 }

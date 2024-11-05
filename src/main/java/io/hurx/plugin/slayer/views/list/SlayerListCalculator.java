@@ -114,8 +114,8 @@ public class SlayerListCalculator {
         skippedWeight = 0;
         for (SlayerAssignment assignment : master.getMaster().getAssignments()) {
             SlayerMonsters monster = assignment.getMonster();
-            if (list.blocked.get().contains(monster)) continue;
-            if (list.skipped.get().contains(monster)) {
+            if (list.blocked.contains(monster)) continue;
+            if (list.skipped.contains(monster)) {
                 skippedWeight += assignment.getWeight();
                 continue;
             } else {

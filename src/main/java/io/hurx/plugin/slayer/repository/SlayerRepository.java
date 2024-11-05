@@ -1,14 +1,14 @@
 package io.hurx.plugin.slayer.repository;
 
-import java.util.ArrayList;
-import java.util.List;
-
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import io.hurx.annotations.ManyToOne;
 import io.hurx.models.repository.Repository;
 import io.hurx.models.slayer.masters.SlayerMasters;
 import io.hurx.plugin.PluginRepository;
 import io.hurx.plugin.slayer.SlayerViews;
+import io.hurx.utils.Injects;
 
 /**
  * The SlayerRepository class manages all data related to Slayer tasks, including lists of Slayer 
@@ -17,19 +17,20 @@ import io.hurx.plugin.slayer.SlayerViews;
  * This repository keeps track of currently selected lists and plannings, and provides methods 
  * for retrieving and managing Slayer-related data.
  */
-public class SlayerRepository extends Repository<PluginRepository> {
-    
+public class SlayerRepository extends Repository<PluginRepository> {    
     /** 
      * Retrieves the SlayerListRepository corresponding to the currently selected list UUID. 
      * 
      * @return the selected SlayerListRepository or null if no valid UUID is set.
      */
+    // TODO: make property
     @JsonIgnore()
     public SlayerListRepository getList() {
+        String listUuid = this.listUuid.get();
         if (listUuid == null) return null;
-        for (SlayerListRepository list : lists) {
-            if (list.getFileName().equals(listUuid)) {
-                return list;
+        for (Repository.Property<SlayerListRepository> list : lists.values()) {
+            if (list.get().getFileName().equals(listUuid)) {
+                return list.get();
             }
         }
         return null;
@@ -40,95 +41,29 @@ public class SlayerRepository extends Repository<PluginRepository> {
      *
      * @return the UUID of the selected list.
      */
-    public String getListUuid() {
-        return listUuid;
-    }
+    public Repository.Property<String> listUuid = new Repository.Property<String>(null);
 
     /**
-     * Sets the UUID of the currently selected Slayer list.
-     *
-     * @param listIndex the UUID of the list to be set as selected.
+     * The slayer sub view
      */
-    public void setListUuid(String listIndex) {
-        this.listUuid = listIndex;
-    }
-    private String listUuid;
+    public Repository.Property<SlayerViews> view = new Repository.Property<SlayerViews>(SlayerViews.Overview);
 
     /**
-     * Gets the current sub-view in the Slayer view.
-     *
-     * @return the current Slayer view name.
+     * All the slayer lists
      */
-    public SlayerViews getView() {
-        return view;
-    }
+    @ManyToOne(type = SlayerListRepository.class)
+    public Repository.Property.List<SlayerListRepository> lists = new Repository.Property.List<SlayerListRepository>();
 
     /**
-     * Sets the current sub-view in the Slayer view.
-     *
-     * @param view the Slayer view name to set as current.
+     * All the slayer planning records
      */
-    public void setView(SlayerViews view) {
-        this.view = view;
-    }
-    private SlayerViews view;
+    @ManyToOne(type = SlayerPlanningRepository.class)
+    public Repository.Property.List<SlayerPlanningRepository> plannings = new Repository.Property.List<SlayerPlanningRepository>();
 
     /**
-     * Gets the list of all Slayer lists.
-     *
-     * @return a list of SlayerListRepository objects.
+     * The selected planning's uuid.
      */
-    public List<SlayerListRepository> getLists() {
-        return lists;
-    }
-
-    /**
-     * Sets the list of all Slayer lists.
-     *
-     * @param lists a list of SlayerListRepository objects to set.
-     */
-    public void setLists(List<SlayerListRepository> lists) {
-        this.lists = lists;
-    }
-    private List<SlayerListRepository> lists;
-
-    /**
-     * Gets the list of all planning repositories.
-     *
-     * @return a list of SlayerPlanningRepository objects.
-     */
-    public List<SlayerPlanningRepository> getPlannings() {
-        return plannings;
-    }
-
-    /**
-     * Sets the list of all planning repositories.
-     *
-     * @param plannings a list of SlayerPlanningRepository objects to set.
-     */
-    public void setPlannings(List<SlayerPlanningRepository> plannings) {
-        this.plannings = plannings;
-    }
-    public List<SlayerPlanningRepository> plannings;
-
-    /**
-     * Gets the UUID of the currently selected planning.
-     *
-     * @return the UUID of the selected planning.
-     */
-    public String getPlanningUuid() {
-        return planningUuid;
-    }
-
-    /**
-     * Sets the UUID of the currently selected planning.
-     *
-     * @param planningIndex the UUID of the planning to be set as selected.
-     */
-    public void setPlanningUuid(String planningIndex) {
-        this.planningUuid = planningIndex;
-    }
-    private String planningUuid;
+    public Repository.Property<String> planningUuid = new Repository.Property<String>(null);
     
     /**
      * Constructs a new SlayerRepository instance.
@@ -137,46 +72,64 @@ public class SlayerRepository extends Repository<PluginRepository> {
      *
      * @param repository the base PluginRepository associated with this Slayer repository.
      */
-    public SlayerRepository(PluginRepository repository) {
+    public SlayerRepository(@JacksonInject PluginRepository repository) {
         super(repository, "slayer");
+
+        // Register the repository in the jackson object mapper injectables
+        Injects.setInjectable(SlayerRepository.class, this);
+    }
+
+    public SlayerRepository initialize() {
+        try {
+            return (SlayerRepository)load();
+        }
+        catch (Exception ex) {
+            System.out.println("Iniitalize slayer..");
+
+            // Initialize pre-99 Slayer list
+            SlayerListRepository pre99 = new SlayerListRepository(this);
+            pre99.name.replace("Pre 99 list");
+            pre99.master.replace(SlayerMasters.Nieve);
+            
+            // Initialize post-99 Slayer list
+            SlayerListRepository post99 = new SlayerListRepository(this);
+            post99.name.replace("Post 99 list");
+            
+            // Add lists to the repository
+            this.lists.add(pre99);
+            this.lists.add(post99);
+            
+            // Set default view and selected list
+            this.listUuid.replace(pre99.getFileName());
+            
+            // Pre-99 planning
+            SlayerPlanningRepository planningPre99 = new SlayerPlanningRepository(this);
+            planningPre99.startXP.replace(0);
+            planningPre99.endXP.replace(13_034_431);
+            planningPre99.listFileName.replace(pre99.getFileName());
+            plannings.add(planningPre99);
+            
+            // Post-99 planning
+            SlayerPlanningRepository planningPost99 = new SlayerPlanningRepository(this);
+            planningPost99.startXP.replace(13_034_431);
+            planningPost99.endXP.replace(200_000_000);
+            planningPost99.listFileName.replace(post99.getFileName());
+            plannings.add(planningPost99);
+            plannings.values().sort((m1, m2) -> Integer.compare(m1.get().startXP.get(), m2.get().endXP.get()));
+
+            try {
+                pre99.save();
+                post99.save();
+                planningPre99.save();
+                planningPost99.save();
+                save();
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
         
-        // Initialize pre-99 Slayer list
-        SlayerListRepository pre99 = new SlayerListRepository(this);
-        pre99.name.set("Pre 99 list");
-        pre99.master.set(SlayerMasters.Nieve);
-        
-        // Initialize post-99 Slayer list
-        SlayerListRepository post99 = new SlayerListRepository(this);
-        post99.name.set("Post 99 list");
-        
-        // Add lists to the repository
-        this.lists = new ArrayList<>();
-        this.lists.add(pre99);
-        this.lists.add(post99);
-        
-        // Set default view and selected list
-        this.view = null;
-        this.listUuid = pre99.getFileName();
-        
-        // Initialize planning repositories
-        this.plannings = new ArrayList<>();
-        
-        // Pre-99 planning
-        SlayerPlanningRepository planningPre99 = new SlayerPlanningRepository(this);
-        planningPre99.startXP.set(0);
-        planningPre99.endXP.set(13_034_431);
-        planningPre99.listFileName.set(pre99.getFileName());
-        plannings.add(planningPre99);
-        
-        // Post-99 planning
-        SlayerPlanningRepository planningPost99 = new SlayerPlanningRepository(this);
-        planningPost99.startXP.set(13_034_431);
-        planningPost99.endXP.set(200_000_000);
-        planningPost99.listFileName.set(post99.getFileName());
-        plannings.add(planningPost99);
-        
-        // Sort plannings by starting XP
-        plannings.sort((m1, m2) -> Integer.compare(m1.startXP.get(), m2.endXP.get()));
+        return this;
     }
 
     /**
@@ -185,10 +138,11 @@ public class SlayerRepository extends Repository<PluginRepository> {
      * @param fileName the name of the file to search for.
      * @return the SlayerListRepository matching the file name, or null if not found.
      */
+    // TODO: make property
     public SlayerListRepository findListByFileName(String fileName) {
-        for (SlayerListRepository list : lists) {
-            if (list.getFileName().equals(fileName)) {
-                return list;
+        for (Repository.Property<SlayerListRepository> list : lists.values()) {
+            if (list.get().getFileName().equals(fileName)) {
+                return list.get();
             }
         }
         return null;
@@ -200,10 +154,11 @@ public class SlayerRepository extends Repository<PluginRepository> {
      * @param fileName the name of the file to search for.
      * @return the SlayerPlanningRepository matching the file name, or null if not found.
      */
+    // TODO: make property
     public SlayerPlanningRepository findPlanningByFileName(String fileName) {
-        for (SlayerPlanningRepository planning : plannings) {
-            if (planning.getFileName().equals(fileName)) {
-                return planning;
+        for (Repository.Property<SlayerPlanningRepository> planning : plannings.values()) {
+            if (planning.get().getFileName().equals(fileName)) {
+                return planning.get();
             }
         }
         return null;
