@@ -23,6 +23,8 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
@@ -224,7 +226,9 @@ public abstract class Repository<R extends Repository<?>> {
 
         try {
             // Serialize the repository to JSON
-            String jsonString = Json.objectMapper.writeValueAsString(this);
+            ObjectMapper objectMapper = Json.objectMapper.copy();
+            objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
+            String jsonString = objectMapper.writeValueAsString(this);
 
             // Write the JSON string to a file
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(new File(fileName + ".json")))) {
