@@ -7,9 +7,11 @@ import javax.swing.KeyStroke;
 import javax.swing.table.TableCellEditor;
 
 import java.awt.Component;
+import java.util.ArrayList;
 import java.util.EventObject;
 import java.awt.event.ActionEvent;
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * A custom cell editor for JTable that allows for editing of numeric values
@@ -22,8 +24,8 @@ public class FormattedNumberTextFieldCellEditor extends AbstractCellEditor imple
     /**
      * Constructs a FormattedNumberTextFieldCellEditor with a new FormattedNumberTextField.
      */
-    public FormattedNumberTextFieldCellEditor() {
-        this.textField = new FormattedNumberTextField();
+    public FormattedNumberTextFieldCellEditor(FormattedNumberTextField textField) {
+        this.textField = textField;
         configureTextField(textField);
     }
 
@@ -41,25 +43,6 @@ public class FormattedNumberTextFieldCellEditor extends AbstractCellEditor imple
                 stopCellEditing(); // Stop editing when ENTER is pressed
             }
         });
-    }
-
-    /**
-     * Retrieves the text field used by this cell editor.
-     *
-     * @return The FormattedNumberTextField instance used as the editor.
-     */
-    public FormattedNumberTextField getTextField() {
-        return this.textField;
-    }
-
-    /**
-     * Sets a new text field for this editor and configures it.
-     *
-     * @param textField The new FormattedNumberTextField to set.
-     */
-    public void setTextField(FormattedNumberTextField textField) {
-        configureTextField(textField);
-        this.textField = textField;
     }
 
     @Override

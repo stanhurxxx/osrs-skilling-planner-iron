@@ -1,13 +1,18 @@
 package io.hurx.components.textField.formattedNumber;
 
-import javax.swing.BorderFactory;
-import javax.swing.JFormattedTextField;
-import javax.swing.SwingConstants;
+import io.hurx.components.EditableComponent;
+
+import javax.swing.*;
 import javax.swing.text.DefaultFormatterFactory;
 import javax.swing.text.NumberFormatter;
 
+import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.text.ParseException;
 
@@ -15,7 +20,19 @@ import java.text.ParseException;
  * A custom formatted text field for inputting and displaying numbers with
  * thousand separators and up to two decimal places.
  */
-public class FormattedNumberTextField extends JFormattedTextField {
+public class FormattedNumberTextField extends JFormattedTextField implements EditableComponent {
+    /** Set the hovered state */
+    public void isHovered(boolean isHovered) {
+        this.isHovered = isHovered;
+    }
+
+    /** Is the text field hovered? */
+    public boolean isHovered() {
+        return isHovered;
+    }
+
+    // Flag indicating whether the text field is currently hovered.
+    private boolean isHovered = false;
 
     /**
      * Constructs a FormattedNumberTextField with default settings.
@@ -49,6 +66,14 @@ public class FormattedNumberTextField extends JFormattedTextField {
         // Center align the text field and set an empty border
         setHorizontalAlignment(SwingConstants.CENTER);
         setBorder(BorderFactory.createEmptyBorder());
+    }
+
+    @Override
+    public FormattedNumberTextField onStopCellEditing(Runnable runnable) {
+        List<Runnable> runnables = onStopCellEditingRunnables.getOrDefault(this, new ArrayList<>());
+        runnables.add(runnable);
+        onStopCellEditingRunnables.put(this, runnables);
+        return this;
     }
 
     /**

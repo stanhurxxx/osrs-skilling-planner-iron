@@ -16,6 +16,7 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.util.AsyncBufferedImage;
+
 import java.awt.image.BufferedImage;
 
 import java.util.List;
@@ -111,31 +112,16 @@ public class Plugin extends net.runelite.client.plugins.Plugin {
                     itemsLoading.remove(item);
                     if (itemsLoading.isEmpty()) {
                         try {
-                            System.out.println("Skilling planner plugin started.");
+                            initialize();
 
-                            Injects.reset();
-                            Injects.setInjectable(Plugin.class, this);
-
-                            accountHash = client.getAccountHash();
-
-                            this.panel = new PluginPanel(this);
-                            this.master = new PluginMaster(this.panel, new PluginRepository(this).initialize());
-                            
-                            this.panel.setReady(true);
-                            this.panel.render();
-
-                            // Force renew the view after initialization for the comboboxes and rendering to work properly
-                            this.master.getViewProperty().replace(this.master.getViewProperty().get());
-
+                            // Post initialization, add panel to toolbar
                             NavigationButton button = NavigationButton.builder()
                                     .tooltip("Skilling planner")
                                     .icon(ImageIO.read(getClass().getResourceAsStream("/icons/panel-icon.png")))
                                     .panel(panel)
                                     .build();
-
                             clientToolbar.addNavigation(button);
                             clientToolbar.openPanel(button);
-                            client.getItemDefinition(5298).getInventoryModel();
                         } catch (Exception ex) {
                             System.out.println("Loading iron skiller plugin failed.");
                             ex.printStackTrace();
@@ -144,6 +130,31 @@ public class Plugin extends net.runelite.client.plugins.Plugin {
                 });
             }
         });
+    }
+
+    /**
+     * Initializes the panel and renders it.
+     */
+    public void initialize() {
+        try {
+            Injects.reset();
+            Injects.setInjectable(Plugin.class, this);
+
+            accountHash = client.getAccountHash();
+
+            this.panel = new PluginPanel(this);
+            this.master = new PluginMaster(this.panel, new PluginRepository(this, Long.toString(accountHash)).initialize());
+
+            this.panel.setReady(true);
+            this.panel.render();
+
+            // Force renew the view after initialization for the comboboxes and rendering to work properly
+            this.master.getViewProperty().replace(this.master.getViewProperty().get());
+        }
+        catch (Exception e) {
+            System.out.println("Couldn't initialize PluginPanel: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -171,7 +182,7 @@ public class Plugin extends net.runelite.client.plugins.Plugin {
             }
             if (client.getAccountHash() != accountHash) {
                 accountHash = client.getAccountHash();
-                this.master = new PluginMaster(this.panel, new PluginRepository(this));
+                this.master = new PluginMaster(this.panel, new PluginRepository(this, Long.toString(accountHash)));
                 this.panel.render();
             }
             if (gameStateChanged.getGameState() == GameState.LOGGED_IN) {

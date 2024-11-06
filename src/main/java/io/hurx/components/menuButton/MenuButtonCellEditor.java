@@ -17,33 +17,13 @@ public class MenuButtonCellEditor extends AbstractCellEditor implements TableCel
     /** The MenuButton component used as the cell editor. */
     private MenuButton button;
 
-    /** The index of the cell being edited. */
-    private int index;
-
     /**
      * Constructs a MenuButtonCellEditor with no initial button.
      * The button will be set for each row as needed.
      */
-    public MenuButtonCellEditor() {
+    public MenuButtonCellEditor(MenuButton button) {
         // Default constructor
-    }
-
-    /**
-     * Sets the index of the cell being edited.
-     *
-     * @param index the index of the cell
-     */
-    public void setIndex(int index) {
-        this.index = index;
-    }
-
-    /**
-     * Retrieves the index of the cell being edited.
-     *
-     * @return the index of the cell
-     */
-    public int getIndex() {
-        return index;
+        this.button = button;
     }
 
     /**

@@ -4,6 +4,7 @@ import javax.swing.JComponent;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
+import io.hurx.components.EditableComponent;
 import io.hurx.utils.Theme;
 
 import java.awt.Color;
@@ -18,7 +19,7 @@ import java.util.List;
  * A custom component that represents a number slider, allowing users to select a numeric value
  * within a specified range by dragging a handle along a line.
  */
-public class NumberSlider extends JComponent {
+public class NumberSlider extends JComponent implements EditableComponent {
     /** Horizontal padding around the slider. */
     public final static int H_PADDING = 10;
     /** Width of the slider handle. */
@@ -74,6 +75,14 @@ public class NumberSlider extends JComponent {
                 }
             }
         });
+    }
+
+    @Override
+    public NumberSlider onStopCellEditing(Runnable runnable) {
+        List<Runnable> runnables = onStopCellEditingRunnables.getOrDefault(this, new ArrayList<>());
+        runnables.add(runnable);
+        onStopCellEditingRunnables.put(this, runnables);
+        return this;
     }
 
     /**

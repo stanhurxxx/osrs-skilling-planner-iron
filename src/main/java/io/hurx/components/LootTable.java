@@ -15,7 +15,7 @@ import javax.swing.SwingConstants;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 
-import io.hurx.components.table.defaultTable.DefaultTable;
+import io.hurx.components.table.Table;
 
 /**
  * The LootTable class represents a custom table component for displaying 
@@ -23,7 +23,7 @@ import io.hurx.components.table.defaultTable.DefaultTable;
  * The table is designed to show a collection of items with a user-friendly
  * interface, including tooltips that display additional item information.
  */
-public class LootTable extends DefaultTable {
+public class LootTable extends Table {
     public final static int ICONS_PER_ROW = 5; // Number of icons displayed per row
     public final static int H_PADDING = 10; // Horizontal padding for icons
     public final static int V_PADDING = 10; // Vertical padding for icons
@@ -44,25 +44,25 @@ public class LootTable extends DefaultTable {
      * the cell renderer for displaying icons.
      */
     public LootTable() {
-        super(DefaultTable.Options.builder().columnCount(ICONS_PER_ROW).build());
-        LootTable table = this;
-        DefaultTableModel model = (DefaultTableModel) this.getModel();
-        
-        // Create columns for the table
-        for (int i = 0; i < ICONS_PER_ROW; i++) {
-            model.addColumn("");
-        }
-        
-        // Set custom cell renderer for each column
-        for (int i = 0; i < ICONS_PER_ROW; i++) {
-            getColumnModel().getColumn(i).setCellRenderer(new CellRenderer());
-        }
-        
-        table.setDoubleBuffered(true);
-        super.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
-        super.setRowHeight(230 / ICONS_PER_ROW);
-        super.setVisible(true);
-        fillTableModel(); // Populate the table model with item data
+        super();
+//        LootTable table = this;
+//        DefaultTableModel model = (DefaultTableModel) this.getModel();
+//
+//        // Create columns for the table
+//        for (int i = 0; i < ICONS_PER_ROW; i++) {
+//            model.addColumn("");
+//        }
+//
+//        // Set custom cell renderer for each column
+//        for (int i = 0; i < ICONS_PER_ROW; i++) {
+//            getColumnModel().getColumn(i).setCellRenderer(new CellRenderer());
+//        }
+//
+//        table.setDoubleBuffered(true);
+//        super.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+//        super.setRowHeight(230 / ICONS_PER_ROW);
+//        super.setVisible(true);
+//        render(); // Populate the table model with item data
     }
 
     /**
@@ -94,61 +94,61 @@ public class LootTable extends DefaultTable {
      * Fills the table model with item icons and their corresponding names.
      * Clears the current rows and populates the model with new data.
      */
-    public void fillTableModel() {
-        DefaultTableModel model = (DefaultTableModel) this.getModel();
-
-        // Clear existing rows in the model
-        for (int i = model.getRowCount() - 1; i >= 0; i--) {
-            model.removeRow(i);
-        }
-
-        itemNames = new ArrayList<>();
-        icons = new ArrayList<>();
-
-        // Populate the table with item icons and random amounts (dummy data)
-        for (Items item : Items.values()) {
-            Icon icon = new Icon(item.getItem().getIcon(),
-                (int) Math.round(Math.random() * 100_000 + (Math.random() > 0.5 ? 100_000 : 0)
-                + (Math.random() > 0.5 ? 10_000_000 : 0)));
-            icon.setOpaque(true);
-            icon.setHPadding(H_PADDING);
-            icon.setVPadding(V_PADDING);
-            icon.setBackground(Theme.TABLE_BG_COLOR);
-            icon.setSize(getWidth() / ICONS_PER_ROW, getWidth() / ICONS_PER_ROW);
-            icons.add(icon);
-            itemNames.add(item.getItem().getName());
-        }
-
-        // Add a special icon for coins
-        Icon icon = new Icon(Items.Coins.getItem().getIcon(), 1_337_000_000);
-        icon.setOpaque(true);
-        icon.setHPadding(H_PADDING);
-        icon.setVPadding(V_PADDING);
-        icon.setBackground(Theme.TABLE_BG_COLOR_HOVER);
-        icon.setSize(getWidth() / ICONS_PER_ROW, getWidth() / ICONS_PER_ROW);
-        icons.add(0, icon);
-        itemNames.add(0, Items.Coins.getItem().getName());
-
-        // Populate the model with rows of icons
-        for (int i = 0; i < 3; i++) {
-            List<Object> cells = new ArrayList<>();
-
-            for (int j = 0; j < ICONS_PER_ROW; j++) {
-                int k = i * ICONS_PER_ROW + j;
-                if (k >= icons.size()) {
-                    JLabel label = new JLabel("");
-                    label.setOpaque(true);
-                    label.setBackground(Theme.TABLE_BG_COLOR);
-                    label.setSize(getWidth() / ICONS_PER_ROW, getWidth() / ICONS_PER_ROW);
-                    cells.add(label);
-                } else {
-                    cells.add(icons.get(k));
-                }
-            }
-
-            model.addRow(cells.toArray()); // Add the constructed row to the model
-        }
-    }
+//    public void render() {
+//        DefaultTableModel model = (DefaultTableModel) this.getModel();
+//
+//        // Clear existing rows in the model
+//        for (int i = model.getRowCount() - 1; i >= 0; i--) {
+//            model.removeRow(i);
+//        }
+//
+//        itemNames = new ArrayList<>();
+//        icons = new ArrayList<>();
+//
+//        // Populate the table with item icons and random amounts (dummy data)
+//        for (Items item : Items.values()) {
+//            Icon icon = new Icon(item.getItem().getIcon(),
+//                (int) Math.round(Math.random() * 100_000 + (Math.random() > 0.5 ? 100_000 : 0)
+//                + (Math.random() > 0.5 ? 10_000_000 : 0)));
+//            icon.setOpaque(true);
+//            icon.setHPadding(H_PADDING);
+//            icon.setVPadding(V_PADDING);
+//            icon.setBackground(Theme.TABLE_BG_COLOR);
+//            icon.setSize(getWidth() / ICONS_PER_ROW, getWidth() / ICONS_PER_ROW);
+//            icons.add(icon);
+//            itemNames.add(item.getItem().getName());
+//        }
+//
+//        // Add a special icon for coins
+//        Icon icon = new Icon(Items.Coins.getItem().getIcon(), 1_337_000_000);
+//        icon.setOpaque(true);
+//        icon.setHPadding(H_PADDING);
+//        icon.setVPadding(V_PADDING);
+//        icon.setBackground(Theme.TABLE_BG_COLOR_HOVER);
+//        icon.setSize(getWidth() / ICONS_PER_ROW, getWidth() / ICONS_PER_ROW);
+//        icons.add(0, icon);
+//        itemNames.add(0, Items.Coins.getItem().getName());
+//
+//        // Populate the model with rows of icons
+//        for (int i = 0; i < 3; i++) {
+//            List<Object> cells = new ArrayList<>();
+//
+//            for (int j = 0; j < ICONS_PER_ROW; j++) {
+//                int k = i * ICONS_PER_ROW + j;
+//                if (k >= icons.size()) {
+//                    JLabel label = new JLabel("");
+//                    label.setOpaque(true);
+//                    label.setBackground(Theme.TABLE_BG_COLOR);
+//                    label.setSize(getWidth() / ICONS_PER_ROW, getWidth() / ICONS_PER_ROW);
+//                    cells.add(label);
+//                } else {
+//                    cells.add(icons.get(k));
+//                }
+//            }
+//
+//            model.addRow(cells.toArray()); // Add the constructed row to the model
+//        }
+//    }
 
     /**
      * Custom cell renderer for the icon columns in the LootTable.

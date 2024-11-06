@@ -1,26 +1,27 @@
 package io.hurx.components.textField;
 
+import io.hurx.utils.Theme;
+
 import java.awt.Component;
 import java.util.EventObject;
 import javax.swing.AbstractCellEditor;
 import javax.swing.JTable;
-import javax.swing.JTextField;
 import javax.swing.table.TableCellEditor;
 
 /**
  * A custom cell editor for JTable that allows for editing text values 
- * using a JTextField. This editor facilitates inline editing of string values 
+ * using a TextField. This editor facilitates inline editing of string values
  * in a JTable cell.
  */
 public class TextFieldCellEditor extends AbstractCellEditor implements TableCellEditor {
-    private JTextField textField;
+    private TextField textField;
 
     /**
-     * Constructs a TextFieldCellEditor with the specified JTextField.
+     * Constructs a TextFieldCellEditor with the specified TextField.
      *
-     * @param textField The JTextField to be used for editing cell values.
+     * @param textField The TextField to be used for editing cell values.
      */
-    public TextFieldCellEditor(JTextField textField) {
+    public TextFieldCellEditor(TextField textField) {
         super();
         this.textField = textField; // Initialize the text field
     }
@@ -65,7 +66,7 @@ public class TextFieldCellEditor extends AbstractCellEditor implements TableCell
      * @param isSelected Indicates whether the cell is selected.
      * @param row The row index of the cell being edited.
      * @param column The column index of the cell being edited.
-     * @return The JTextField component that will be used for editing.
+     * @return The TextField component that will be used for editing.
      */
     @Override
     public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {

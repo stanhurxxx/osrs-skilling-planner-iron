@@ -8,31 +8,7 @@ import io.hurx.models.views.Views;
  * Each view is associated with a name and an icon path.
  */
 public enum PluginViews implements Views {
-    Overview("Overview", IconPaths.SkillOverall),
-    Agility("Agility", IconPaths.SkillAgility),
-    Attack("Attack", IconPaths.SkillAttack),
-    Construction("Construction", IconPaths.SkillConstruction),
-    Cooking("Cooking", IconPaths.SkillCooking),
-    Crafting("Crafting", IconPaths.SkillCrafting),
-    Defence("Defence", IconPaths.SkillDefence),
-    Farming("Farming", IconPaths.SkillFarming),
-    Firemaking("Firemaking", IconPaths.SkillFiremaking),
-    Fishing("Fishing", IconPaths.SkillFishing),
-    Fletching("Fletching", IconPaths.SkillFletching),
-    Herblore("Herblore", IconPaths.SkillHerblore),
-    Hitpoints("Hitpoints", IconPaths.SkillHitpoints),
-    Hunter("Hunter", IconPaths.SkillHunter),
-    Magic("Magic", IconPaths.SkillMagic),
-    Mining("Mining", IconPaths.SkillMining),
-    Prayer("Prayer", IconPaths.SkillPrayer),
-    Ranged("Ranged", IconPaths.SkillRanged),
-    Runecraft("Runecraft", IconPaths.SkillRunecraft),
-    Slayer("Slayer", IconPaths.SkillSlayer),
-    Smithing("Smithing", IconPaths.SkillSmithing),
-    Strength("Strength", IconPaths.SkillStrength),
-    Thieving("Thieving", IconPaths.SkillThieving),
-    Woodcutting("Woodcutting", IconPaths.SkillWoodcutting),
-    LoggedOut(null, IconPaths.SkillEHP);
+    Profile(null, null);
 
     /** 
      * The name of the view.

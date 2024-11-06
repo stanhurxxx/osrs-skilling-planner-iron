@@ -19,44 +19,14 @@ public class NumberSliderCellEditor extends AbstractCellEditor implements TableC
     /** The NumberSlider component used for editing cell values. */
     private NumberSlider slider;
 
-    /** The index of the row being edited. */
-    private int index;
-
     /** List of NumberSlider instances to handle mouse listeners. */
     private List<NumberSlider> mouseListeners = new ArrayList<>();
 
     /**
      * Constructs a NumberSliderCellEditor. The slider will be set for each row.
      */
-    public NumberSliderCellEditor() {
-        // Default constructor
-    }
-
-    /**
-     * Sets the index of the row being edited.
-     *
-     * @param index the index of the row
-     */
-    public void setIndex(int index) {
-        this.index = index;
-    }
-
-    /**
-     * Retrieves the index of the row being edited.
-     *
-     * @return the index of the row
-     */
-    public int getIndex() {
-        return index;
-    }
-
-    /**
-     * Retrieves the NumberSlider associated with this editor.
-     *
-     * @return the current NumberSlider
-     */
-    public NumberSlider getSlider() {
-        return this.slider;
+    public NumberSliderCellEditor(NumberSlider slider) {
+        this.slider = slider;
     }
 
     /**
@@ -73,7 +43,7 @@ public class NumberSliderCellEditor extends AbstractCellEditor implements TableC
             slider.addMouseListener(new java.awt.event.MouseAdapter() {
                 @Override
                 public void mouseReleased(java.awt.event.MouseEvent e) {
-                    editor.stopCellEditing(); // Stop editing when mouse is released
+                editor.stopCellEditing(); // Stop editing when mouse is released
                 }
             });
             mouseListeners.add(slider);

@@ -1,6 +1,7 @@
 package io.hurx.models.views;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import javax.swing.JComboBox;
@@ -540,7 +541,7 @@ public class ViewManagement {
                 }
                 if (oneToManyRelations.size() > 0) {
                     for (OneToMany oneToMany : oneToManyRelations) {
-                        for (Property<? extends Repository<? extends TRepository>> repository : oneToMany.listProperty.values()) {
+                        for (Property<? extends Repository<? extends TRepository>> repository : oneToMany.listProperty.properties()) {
                             ComboBoxModel model = new ComboBoxModel(repository.get(), oneToMany);
                             cb.addItem(model);
                             if (oneToMany.uuidProperty.get() != null && repository.get().getFileName() != null && oneToMany.uuidProperty.get().equals(repository.get().getFileName())) {
@@ -868,7 +869,14 @@ public class ViewManagement {
          */
         public static class Container<TMaster extends Master<TRepository, TEnum>, 
             TRepository extends Repository<?>, 
-            TEnum extends Views> extends Base {
+            TEnum extends Views> extends Element {
+
+            /**
+             * Indicates whether the container should be visible, and thus rendered.
+             */
+            public boolean isVisible() {
+                return true;
+            }
 
             /** The master entity associated with this container. */
             private final TMaster master;
@@ -910,11 +918,27 @@ public class ViewManagement {
             *
             * @param elements the elements to add
             */
-            public final void addElement(Element ...elements) {
+            public final void add(Element ...elements) {
                 for (Element element : elements) {
                     this.elements.add(element);
                 }
                 this.getRoot().render();
+            }
+
+            /**
+             * Adds one or more components to this container.
+             * @param jComponents
+             */
+            public final void add(JComponent ...jComponents) {
+                List<Element> elements = new ArrayList<>();
+                for (int i = 0; i < jComponents.length; i ++) {
+                    JComponent jComponent = jComponents[i];
+                    elements.add(new Component<TMaster, TRepository, TEnum>(
+                        this,
+                        jComponent
+                    ));
+                }
+                add(elements.toArray(new Element[0]));
             }
 
             /**
@@ -925,7 +949,7 @@ public class ViewManagement {
             * @param index the index at which to insert the elements
             * @param elements the elements to insert
             */
-            public final void insertElement(int index, Element ...elements) {
+            public final void insert(int index, Element ...elements) {
                 for (int i = 0; i < elements.length; i++) {
                     int j = index + i;
                     if (j < this.elements.size()) {
@@ -938,12 +962,29 @@ public class ViewManagement {
             }
 
             /**
+             * Inserts one or more components to this container.
+             * @param index the index
+             * @param jComponents the components
+             */
+            public final void insert(int index, JComponent ...jComponents) {
+                List<Element> elements = new ArrayList<>();
+                for (int i = 0; i < jComponents.length; i ++) {
+                    JComponent jComponent = jComponents[i];
+                    elements.add(new Component<TMaster, TRepository, TEnum>(
+                            this,
+                            jComponent
+                    ));
+                }
+                insert(index, elements.toArray(new Element[0]));
+            }
+
+            /**
             * Removes one or more specified elements from this container.
             * If an element is contained in the list, it is removed.
             *
             * @param elements the elements to remove
             */
-            public final void removeElement(Element ...elements) {
+            public final void remove(Element ...elements) {
                 for (Element element : elements) {
                     this.elements.remove(element);
                 }
@@ -956,7 +997,7 @@ public class ViewManagement {
             *
             * @param indices the indices of the elements to remove
             */
-            public final void removeElement(int ...indices) {
+            public final void remove(int ...indices) {
                 List<Element> toRemove = new ArrayList<>();
                 for (int i = 0; i < this.elements.size(); i++) {
                     Element view = this.elements.get(i);
@@ -966,7 +1007,14 @@ public class ViewManagement {
                         }
                     }
                 }
-                removeElement(toRemove.toArray(new Element[0]));
+                remove(toRemove.toArray(new Element[0]));
+            }
+
+            /**
+             * Removes all the elements from a container
+             */
+            public final void removeAll() {
+                this.elements.clear();
             }
         }
 
@@ -992,6 +1040,7 @@ public class ViewManagement {
              */
             public final void setComponent(JComponent component) {
                 this.component = component;
+                getRoot().render();
             }
 
             /**
@@ -1127,10 +1176,8 @@ public class ViewManagement {
              * @param containers the containers to add
              */
             @SafeVarargs
-            public final void addContainer(Container<TMaster, TRepository, TEnum> ...containers) {
-                for (Container<TMaster, TRepository, TEnum> container : containers) {
-                    this.containers.add(container);
-                }
+            public final void add(Container<TMaster, TRepository, TEnum> ...containers) {
+                this.containers.addAll(Arrays.asList(containers));
                 this.getMaster().getRoot().render();
             }
 
@@ -1141,7 +1188,7 @@ public class ViewManagement {
              * @param containers the containers to insert
              */
             @SafeVarargs
-            public final void insertContainer(int index, Container<TMaster, TRepository, TEnum> ...containers) {
+            public final void insert(int index, Container<TMaster, TRepository, TEnum> ...containers) {
                 for (int i = 0; i < containers.length; i++) {
                     int j = index + i;
                     if (j < this.containers.size()) {
@@ -1159,7 +1206,7 @@ public class ViewManagement {
              * @param containers the containers to remove
              */
             @SafeVarargs
-            public final void removeContainer(Container<TMaster, TRepository, TEnum> ...containers) {
+            public final void remove(Container<TMaster, TRepository, TEnum> ...containers) {
                 for (Container<TMaster, TRepository, TEnum> container : containers) {
                     this.containers.remove(container);
                 }
@@ -1172,7 +1219,7 @@ public class ViewManagement {
              * @param indices the indices of the containers to remove
              */
             @SuppressWarnings("unchecked")
-            public final void removeContainer(int ...indices) {
+            public final void remove(int ...indices) {
                 List<Container<TMaster, TRepository, TEnum>> toRemove = new ArrayList<>();
                 for (int i = 0; i < this.containers.size(); i++) {
                     Container<TMaster, TRepository, TEnum> container = this.containers.get(i);
@@ -1182,7 +1229,7 @@ public class ViewManagement {
                         }
                     }
                 }
-                removeContainer((Container<TMaster, TRepository, TEnum>[]) toRemove.toArray());
+                remove(toRemove.toArray(new Container[0]));
             }
         }
     }

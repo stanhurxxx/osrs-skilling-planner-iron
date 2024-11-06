@@ -12,7 +12,11 @@ public enum MenuButtons {
     Edit("Edit", IconPaths.MenuEdit),
     Upload("Import", IconPaths.MenuUpload),
     Download("Export", IconPaths.MenuDownload),
-    Reset("Reset defaults", IconPaths.MenuReset);
+    Reset("Reset defaults", IconPaths.MenuReset),
+    Duplicate("Duplicate", IconPaths.MenuDuplicate),
+    Delete("Delete", IconPaths.MenuDelete),
+    Save("Save", IconPaths.MenuSave),
+    ;
 
     /**
      * The display name of the menu button.

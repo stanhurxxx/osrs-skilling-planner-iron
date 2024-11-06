@@ -1,9 +1,7 @@
 package io.hurx.models.repository;
 
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -14,6 +12,7 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -23,7 +22,6 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
@@ -55,6 +53,18 @@ public abstract class Repository<R extends Repository<?>> {
      */
     @JsonIgnore
     public final static File CACHE_DIR = new File(Plugin.HOME_DIR.getAbsolutePath());
+
+    /**
+     * Last modified timestamp
+     * @return
+     */
+    public long lastModified() {
+        return lastModified;
+    }
+    public void lastModified(long lastModified) {
+        this.lastModified = lastModified;
+    }
+    protected long lastModified = 0;
 
     @JsonIgnore
     private R parent; // Reference to the parent repository
@@ -190,6 +200,9 @@ public abstract class Repository<R extends Repository<?>> {
                     // priority
                     constructor = c;
                 }
+                else if (c.getParameters().length == 2 && Plugin.class.isAssignableFrom(c.getParameters()[0].getType()) && String.class.isAssignableFrom(c.getParameters()[1].getType())) {
+                    constructor = c;
+                }
             }
         }
         if (constructor == null) {
@@ -197,7 +210,7 @@ public abstract class Repository<R extends Repository<?>> {
                 if (c.getParameters().length == 1 && Repository.class.isAssignableFrom(c.getParameters()[0].getType())) {
                     constructor = c;
                 }
-                else if (c.getParameters().length == 1 && Plugin.class.isAssignableFrom(c.getParameters()[0].getType())) {
+                else if (c.getParameters().length == 2 && Plugin.class.isAssignableFrom(c.getParameters()[0].getType())) {
                     constructor = c;
                 }
             }
@@ -233,6 +246,7 @@ public abstract class Repository<R extends Repository<?>> {
             // Write the JSON string to a file
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(new File(fileName + ".json")))) {
                 writer.write(jsonString);
+                lastModified((new File(fileName + ".json")).lastModified());
             } catch (IOException e) {
                 e.printStackTrace(); // Log any IO exceptions
             }
@@ -278,7 +292,7 @@ public abstract class Repository<R extends Repository<?>> {
                         try {
                             @SuppressWarnings("unchecked")
                             Repository.Property.List<Repository<?>> list = (Repository.Property.List<Repository<?>>)field.get(this);
-                            for (Property<Repository<?>> property : list.values()) {
+                            for (Property<Repository<?>> property : list.properties()) {
                                 property.get().initialize();
                             }
                         } catch (Exception e) {
@@ -290,15 +304,9 @@ public abstract class Repository<R extends Repository<?>> {
         }
 
         // Check if the JSON file exists
-        if (new File(fileName + ".json").exists()) {
-            String input = "";
-            // Read the contents of the file
-            try (BufferedReader reader = new BufferedReader(new FileReader(new File(fileName + ".json")))) {
-                input += reader.readLine() + "\n"; // Append the first line
-            } catch (IOException e) {
-                e.printStackTrace();
-                throw e; // Rethrow any IO exceptions
-            }
+        File file = new File(fileName + ".json");
+        this.lastModified(file.lastModified());
+        if (file.exists()) {
             try {
                 @SuppressWarnings("unchecked")
                 Repository<R> data = Json.objectMapper.readValue(new File(fileName + ".json"), getClass());
@@ -805,7 +813,7 @@ public abstract class Repository<R extends Repository<?>> {
              * @return The value at the specified index, or null if the index is out of bounds.
              */
             @JsonIgnore
-            public Property<V> get(int index) {
+            public Property<V> getProperty(int index) {
                 for (int i = 0; i < value.size(); i++) {
                     if (i == index) {
                         return value.get(i); // Return the value at the index
@@ -822,12 +830,64 @@ public abstract class Repository<R extends Repository<?>> {
              * @return The value at the specified index, or the default value.
              */
             @JsonIgnore
-            public Property<V> get(int index, V defaultValue) {
-                Property<V> get = this.get(index); // Retrieve the value at the index
+            public Property<V> getProperty(int index, V defaultValue) {
+                Property<V> get = this.getProperty(index); // Retrieve the value at the index
                 return get == null ? new Property<>(defaultValue) : get; // Return default value if not found
             }
 
-            public java.util.List<Property<V>> values() {
+            /**
+             * Retrieves the value at the specified index.
+             *
+             * @param index The index of the value to retrieve.
+             * @return The value at the specified index, or null if the index is out of bounds.
+             */
+            @JsonIgnore
+            public V get(int index) {
+                Property<V> get = getProperty(index);
+                return get == null ? null : get.get();
+            }
+
+            /**
+             * Retrieves the value at the specified index, or returns a default value if the index is out of bounds.
+             *
+             * @param index The index of the value to retrieve.
+             * @param defaultValue The value to return if the index is out of bounds.
+             * @return The value at the specified index, or the default value.
+             */
+            @JsonIgnore
+            public V get(int index, V defaultValue) {
+                Property<V> get = this.getProperty(index); // Retrieve the value at the index
+                return get == null ? defaultValue : get.get(); // Return default value if not found
+            }
+
+            /**
+             * Get a java.util.List based on the value, mapped to the data type and not wrapped in a property.
+             */
+            public java.util.List<V> values() {
+                java.util.List<V> list = new ArrayList<>();
+                for (Property<V> property : this.value) {
+                    if (property == null) {
+                        list.add(null);
+                    }
+                    else {
+                        list.add(property.get());
+                    }
+                }
+                return list;
+            }
+
+            /**
+             * Get the size of the list
+             * @return
+             */
+            public int size() {
+                return this.value.size();
+            }
+
+            /**
+             * Gets a list with the datatype wrapped in its original properties.
+             */
+            public java.util.List<Property<V>> properties() {
                 return value;
             }
 
@@ -1088,10 +1148,10 @@ public abstract class Repository<R extends Repository<?>> {
              * @return the associated value if present, otherwise the default value
              */
             @JsonIgnore
-            public V get(K property, Property<V> defaultValue) {
-                Property<V> v = this.value.getOrDefault(property, defaultValue);
-                this.value.put(property, v);
-                return v == null ? null : v.get();
+            public V get(K property, V defaultValue) {
+                Property<V> p = this.value.get(property);
+                V v = p == null ? null : p.get();
+                return v == null ? defaultValue : v;
             }
 
             /**
@@ -1103,15 +1163,52 @@ public abstract class Repository<R extends Repository<?>> {
              * @return the associated value if present, otherwise the default value
              */
             @JsonIgnore
-            public V get(K property, V defaultValue) {
-                Property<V> v = this.value.getOrDefault(property, new Property<V>(defaultValue));
-                this.value.put(property, v);
-                return v == null ? null : v.get();
+            public Property<V> getProperty(K property, Property<V> defaultValue) {
+                Property<V> v = this.value.getOrDefault(property, defaultValue);
+                return v == null ? defaultValue : v;
             }
 
             /**
              * Retrieves the value associated with a specified key.
              * 
+             * @param property the key to look up in the map
+             * @return the associated value if present, otherwise {@code null}
+             */
+            @JsonIgnore
+            public Property<V> getProperty(K property) {
+                return this.value.get(property);
+            }
+
+            /**
+             * Get the key set of the map
+             */
+            public Set<K> keySet() {
+                return this.value.keySet();
+            }
+
+            /**
+             * Get all the values in the map
+             */
+            public java.util.List<V> values() {
+                Iterator<Property<V>> iterator = this.value.values().iterator();
+                java.util.List<V> values = new ArrayList<>();
+                while (iterator.hasNext()) {
+                    Property<V> next = iterator.next();
+                    values.add(next.get());
+                }
+                return values;
+            }
+
+            /**
+             * Gets the size of the map.
+             */
+            public int size() {
+                return this.value.size();
+            }
+
+            /**
+             * Retrieves the value associated with a specified key.
+             *
              * @param property the key to look up in the map
              * @return the associated value if present, otherwise {@code null}
              */
@@ -1360,7 +1457,7 @@ public abstract class Repository<R extends Repository<?>> {
                                 gen.writeStartArray();
                                 Object fieldValue = field.get(value);
                                 if (fieldValue instanceof Repository.Property.List) {
-                                    for (Property<Repository<?>> v : ((Repository.Property.List<Repository<?>>) fieldValue).values()) {
+                                    for (Property<Repository<?>> v : ((Repository.Property.List<Repository<?>>) fieldValue).properties()) {
                                         // gen.writeStartObject();
                                         gen.writeString(v.get().getFileName());
                                         // gen.writeEndObject();

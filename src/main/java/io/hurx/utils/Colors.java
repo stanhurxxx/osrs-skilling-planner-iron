@@ -7,6 +7,34 @@ import java.awt.Color;
  */
 public class Colors {
     /**
+     * Lightens a color by a specified percentage.
+     *
+     * @param color The original color to lighten.
+     * @param percentage The percentage by which to lighten the color. A value between 0 and 100.
+     * @return A new Color object that is the lightened version of the original color.
+     */
+    public static Color lightenColor(Color color, float percentage) {
+        // Clamp the percentage to ensure it is between 0 and 100
+        percentage = Math.max(0, Math.min(percentage, 100));
+
+        // Convert percentage to a factor between 1 and 1 + percentage / 100
+        float factor = 1 + (percentage / 100);
+
+        // Get the RGB values of the original color
+        int red = color.getRed();
+        int green = color.getGreen();
+        int blue = color.getBlue();
+
+        // Lighten the color by increasing each component based on the factor
+        int newRed = (int) Math.min(255, red * factor);
+        int newGreen = (int) Math.min(255, green * factor);
+        int newBlue = (int) Math.min(255, blue * factor);
+
+        // Return a new Color object with the lightened RGB values
+        return new Color(newRed, newGreen, newBlue);
+    }
+
+    /**
      * Merges two colors based on a specified percentage.
      *
      * @param color1    the first color to merge.

@@ -1,11 +1,15 @@
 package io.hurx.plugin;
 
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.swing.JComponent;
+import javax.swing.*;
 
-import io.hurx.components.table.defaultTable.DefaultTable;
+import io.hurx.components.table.Table;
 import io.hurx.models.views.ViewManagement;
 import io.hurx.utils.Theme;
 import net.runelite.client.ui.DynamicGridLayout;
@@ -30,6 +34,11 @@ public class PluginPanel extends net.runelite.client.ui.PluginPanel {
      * Indicates whether the panel is ready for rendering.
      */
     private boolean ready = false;
+
+    /**
+     * Keeps track of the reloaded masters, so they don't reload more than once.
+     */
+    private List<ViewManagement.Entity.Master<?, ?>> reloadedMasters = new ArrayList<>();
 
     /**
      * Retrieves the hierarchy of master views associated with this panel.
@@ -102,6 +111,12 @@ public class PluginPanel extends net.runelite.client.ui.PluginPanel {
         while (getComponentCount() > renderedComponentCount) {
             remove(renderedComponentCount);
         }
+        // Set the z order
+        for (int i = 0; i < getComponentCount(); i ++) {
+            Component c = getComponent(i);
+            if (c == null) continue;
+            setComponentZOrder(c, i);
+        }
         revalidate();
         repaint();
     }
@@ -110,7 +125,9 @@ public class PluginPanel extends net.runelite.client.ui.PluginPanel {
      * Reloads all repositories in the plugin's master entity.
      */
     public void reloadRepositories() {
+        reloadedMasters.clear();
         reloadRepositoriesInMaster(getPlugin().getMaster());
+        reloadedMasters.clear();
     }
 
     /**
@@ -119,7 +136,12 @@ public class PluginPanel extends net.runelite.client.ui.PluginPanel {
      * @param master the master entity from which to reload repositories
      */
     private void reloadRepositoriesInMaster(ViewManagement.Entity.Master<?, ?> master) {
-        master.getRepository().initialize(); // Initialize the repository associated with the master entity.
+        if (reloadedMasters.contains(master)) return;
+        File file = new File(master.getRepository().generatePath() + ".json");
+        if (file.lastModified() != master.getRepository().lastModified()) {
+            master.getRepository().initialize(); // Initialize the repository associated with the master entity.
+        }
+        reloadedMasters.add(master); // Keep track of reloaded masters
         for (ViewManagement.Entity.Container<?, ?, ?> container : master.getContainers()) {
             reloadRepositoriesInContainer(container); // Reload repositories in each container of the master.
         }
@@ -137,6 +159,9 @@ public class PluginPanel extends net.runelite.client.ui.PluginPanel {
         for (ViewManagement.Entity.Element element : container.getElements()) {
             if (element instanceof ViewManagement.Entity.Master) {
                 reloadRepositoriesInMaster((ViewManagement.Entity.Master<?, ?>) element); // Recursively reload repositories if the element is a master.
+            }
+            else if (element instanceof ViewManagement.Entity.Container) {
+                reloadRepositoriesInContainer((ViewManagement.Entity.Container<?, ?, ?>) element);
             }
         }
     }
@@ -200,12 +225,15 @@ public class PluginPanel extends net.runelite.client.ui.PluginPanel {
      * @param container the container entity to search within
      */
     private void findComponentsToBeRenderedInContainer(List<JComponent> toBeRendered, ViewManagement.Entity.Container<?, ?, ?> container) {
+        if (!container.isVisible()) return;
         for (ViewManagement.Entity.Element element : container.getElements()) {
             if (element instanceof ViewManagement.Entity.Master) {
                 findComponentsToBeRenderedInMaster(toBeRendered, (ViewManagement.Entity.Master<?, ?>) element);
             } else if (element instanceof ViewManagement.Entity.Component) {
                 ViewManagement.Entity.Component<?, ?, ?> component = (ViewManagement.Entity.Component<?, ?, ?>) element;
                 toBeRendered.add(component.getComponent());
+            } else if (element instanceof ViewManagement.Entity.Container) {
+                findComponentsToBeRenderedInContainer(toBeRendered, (ViewManagement.Entity.Container<?, ?, ?>) element);
             }
         }
     }
@@ -251,6 +279,7 @@ public class PluginPanel extends net.runelite.client.ui.PluginPanel {
      * @param container the container entity to render
      */
     private void renderContainer(List<JComponent> rendered, List<JComponent> toBeRendered, ViewManagement.Entity.Container<?, ?, ?> container) {
+        if (!container.isVisible()) return;
         for (ViewManagement.Entity.Element element : container.getElements()) {
             if (element instanceof ViewManagement.Entity.Master) {
                 ViewManagement.Entity.Master<?, ?> m = (ViewManagement.Entity.Master<?, ?>) element;
@@ -258,6 +287,8 @@ public class PluginPanel extends net.runelite.client.ui.PluginPanel {
             } else if (element instanceof ViewManagement.Entity.Component) {
                 ViewManagement.Entity.Component<?, ?, ?> component = (ViewManagement.Entity.Component<?, ?, ?>) element;
                 this.renderComponent(rendered, toBeRendered, component);
+            } else if (element instanceof ViewManagement.Entity.Container) {
+                this.renderContainer(rendered, toBeRendered, (ViewManagement.Entity.Container<?, ?, ?>) element);
             }
         }
     }
@@ -285,11 +316,6 @@ public class PluginPanel extends net.runelite.client.ui.PluginPanel {
         for (int i = rendered.size(); i < getComponentCount(); i++) {
             JComponent jComponentAtIndex = (JComponent) getComponent(i);
             if (jComponent == getComponent(i)) {
-                // Update the component if already rendered
-                if (jComponent instanceof DefaultTable) {
-                    // Function that fills a JTable's model's rows
-                    ((DefaultTable) jComponent).fillTableModel();
-                }
                 jComponent.revalidate();
                 jComponent.repaint();
                 found = true;

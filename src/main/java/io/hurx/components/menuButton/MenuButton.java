@@ -1,23 +1,26 @@
 package io.hurx.components.menuButton;
 
-import javax.swing.JPanel;
+import javax.swing.*;
 
+import io.hurx.components.EditableComponent;
 import io.hurx.models.MenuButtons;
 import io.hurx.utils.Resources;
 import io.hurx.utils.Theme;
 
-import java.awt.Graphics;
+import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-
-import javax.swing.ImageIcon;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * An abstract class representing a menu button with an icon.
  * This class extends JPanel and provides functionalities to handle
  * mouse events and rendering of the button with an icon.
  */
-public abstract class MenuButton extends JPanel {
+public class MenuButton extends JPanel implements EditableComponent {
     
     /** The icon associated with this menu button. */
     private MenuButtons icon;
@@ -31,6 +34,36 @@ public abstract class MenuButton extends JPanel {
     /** The image icon loaded from resources. */
     private ImageIcon imageIcon;
 
+    // The MenuButton instance being rendered.
+    private MenuButton menuButton;
+
+    /** Is the button hovered? */
+    public boolean isHovered() {
+        return isHovered;
+    }
+
+    /** Set the hovered state */
+    public void isHovered(boolean isHovered) {
+        this.isHovered = isHovered;
+    }
+
+    // Flag indicating whether the button is currently hovered.
+    private boolean isHovered = false;
+
+    /** Is the button selected? */
+    public boolean isSelected() {
+        return isSelected;
+    }
+
+    /** Set the selected state */
+    public MenuButton isSelected(boolean isSelected) {
+        this.isSelected = isSelected;
+        return this;
+    }
+
+    // Flag indicating whether the button is currently selected.
+    private boolean isSelected = false;
+
     /**
      * Constructs a MenuButton with the specified icon.
      *
@@ -40,42 +73,25 @@ public abstract class MenuButton extends JPanel {
         MenuButton button = this;
         this.icon = icon;
         this.imageIcon = Resources.loadImageIcon(icon.getIconPath().getPath(), 512, 512);
-        vPadding = 2;
-        hPadding = 2;
-
+        vPadding = 5;
+        hPadding = 5;
+        setToolTipText(icon.getName());
         addMouseListener(new MouseAdapter() {
             @Override
             public void mouseReleased(MouseEvent e) {
-                if (e.getButton() == MouseEvent.BUTTON1) {
-                    button.mouseReleased(e);
+                for (Runnable runnable : onStopCellEditingRunnables.getOrDefault(button, new ArrayList<>())) {
+                    runnable.run();
                 }
             }
-
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                setBackground(Theme.TABLE_BG_COLOR_HOVER);
-                revalidate();
-                repaint();
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                setBackground(null);
-                revalidate();
-                repaint();
-            }
         });
-        
-        addMouseMotionListener(new MouseAdapter() {
-            @Override
-            public void mouseMoved(MouseEvent e) {
-                setBackground(Theme.TABLE_BG_COLOR_HOVER);
-                revalidate();
-                repaint();
-            }
-        });
+    }
 
-        setToolTipText(icon.getName());
+    @Override
+    public MenuButton onStopCellEditing(Runnable runnable) {
+        List<Runnable> runnables = onStopCellEditingRunnables.getOrDefault(this, new ArrayList<>());
+        runnables.add(runnable);
+        onStopCellEditingRunnables.put(this, runnables);
+        return this;
     }
 
     /**
@@ -111,7 +127,7 @@ public abstract class MenuButton extends JPanel {
      *
      * @param e the mouse event triggered by the release action
      */
-    public abstract void mouseReleased(MouseEvent e);
+    public void mouseReleased(MouseEvent e) {}
 
     /**
      * Paints the component. This method is called whenever
@@ -124,16 +140,22 @@ public abstract class MenuButton extends JPanel {
         super.paintComponent(g);
         
         // Draw the background if set
+        setOpaque(true);
         if (getBackground() != null) {
-            setOpaque(true);
             g.setColor(getBackground());
-            g.fillRect(0, 0, getWidth(), getHeight());
+            g.fillRect(0, 0, getHeight(), getHeight());
         }
         
         // Draw the icon if available
         if (getIcon() != null) {
-            g.drawImage(imageIcon.getImage(), hPadding, vPadding,
-                         this.getWidth() - hPadding * 2, this.getWidth() - hPadding * 2, this);
+            g.drawImage(
+                imageIcon.getImage(),
+                hPadding,
+                vPadding,
+                this.getHeight() - hPadding * 2,
+                this.getHeight() - vPadding * 2,
+                this
+            );
         }
     }
 }
