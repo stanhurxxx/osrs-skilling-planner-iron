@@ -304,15 +304,15 @@ public class ProfileView extends ViewManagement.Entity.View<PluginMaster, Plugin
                 /** Duplicates the profile */
                 public void duplicate() {
                     String newName = (String) JOptionPane.showInputDialog(
-                            null,
-                            "Enter new name:",
-                            "Duplicating profile \"" + profile.name.get() + "\"",
-                            JOptionPane.PLAIN_MESSAGE,
-                            null,
-                            null,
-                            profile.name.get()
+                        null,
+                        "Enter new name:",
+                        "Duplicating profile \"" + profile.name.get() + "\"",
+                        JOptionPane.PLAIN_MESSAGE,
+                        null,
+                        null,
+                        profile.name.get()
                     );
-                    if (newName == null) newName = "Unnamed profile";
+                    if (newName == null || newName.isEmpty()) newName = "Unnamed profile";
                     ProfileRepository duplicate = (ProfileRepository) profile.duplicate();
                     duplicate.name.replace(newName);
                     getContainer().getMaster().getRepository().profiles.add(duplicate);

@@ -924,6 +924,7 @@ public abstract class Repository<R extends Repository<?>> {
                 for (Runnable runnable : onDone) {
                     runnable.run();
                 }
+                isDirty = true;
                 return this; // Return this instance for method chaining
             }
 
@@ -941,6 +942,7 @@ public abstract class Repository<R extends Repository<?>> {
                 for (V v : toRemove) {
                     this.remove(v);
                 }
+                isDirty = true;
                 return this;
             }
 
@@ -1000,6 +1002,7 @@ public abstract class Repository<R extends Repository<?>> {
                 for (Runnable runnable : onDone) {
                     runnable.run();
                 }
+                isDirty = true;
                 return this; // Return this instance for method chaining
             }
 
@@ -1013,6 +1016,7 @@ public abstract class Repository<R extends Repository<?>> {
                 for (Listener<V> listener : listeners) {
                     listener.onClear(); // Notify listeners that the list was cleared
                 }
+                isDirty = true;
                 return this; // Return this instance for method chaining
             }
 
@@ -1041,6 +1045,7 @@ public abstract class Repository<R extends Repository<?>> {
                         listener.onChange(this.value.get(index), index, index, oldValue, value);
                     }
                 }
+                isDirty = true;
                 return this; // Return this instance for method chaining
             }
 
@@ -1082,6 +1087,7 @@ public abstract class Repository<R extends Repository<?>> {
                 for (Runnable runnable : onDone) {
                     runnable.run();
                 }
+                isDirty = true;
                 return this; // Return this instance for method chaining
             }
 
@@ -1317,6 +1323,7 @@ public abstract class Repository<R extends Repository<?>> {
                 for (int i = 0; i < onDone.size(); i++) {
                     onDone.get(i).run();
                 }
+                isDirty = true;
                 return this;
             }
 
@@ -1373,6 +1380,7 @@ public abstract class Repository<R extends Repository<?>> {
                     if (listener == null) continue;
                     listener.onClear();
                 }
+                isDirty = true;
                 return this;
             }
 
@@ -1416,6 +1424,9 @@ public abstract class Repository<R extends Repository<?>> {
                 for (int i = 0; i < onDone.size(); i++) {
                     onDone.get(i).run();
                 }
+
+                isDirty = true;
+
                 return this;
             }
 
