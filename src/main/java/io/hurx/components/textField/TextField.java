@@ -51,7 +51,7 @@ public class TextField extends JTextField implements EditableComponent {
     }
 
     @Override
-    public TextField onStopCellEditing(Runnable runnable) {
+    public TextField onChange(Runnable runnable) {
         List<Runnable> runnables = onStopCellEditingRunnables.getOrDefault(this, new ArrayList<>());
         runnables.add(runnable);
         onStopCellEditingRunnables.put(this, runnables);

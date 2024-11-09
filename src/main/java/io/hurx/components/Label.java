@@ -254,7 +254,7 @@ public class Label extends Table {
         if (bottomPadding) rows.add(emptyRow.toArray());
 
         // Calculate cell widths
-        int totalWidth = 234;
+        int totalWidth = 229;
         int elements = 0;
         int menuButtons = 0;
         for (int i = 0; i < row.length; i ++) {

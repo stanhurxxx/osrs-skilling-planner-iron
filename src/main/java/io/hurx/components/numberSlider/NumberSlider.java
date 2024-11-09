@@ -78,7 +78,7 @@ public class NumberSlider extends JComponent implements EditableComponent {
     }
 
     @Override
-    public NumberSlider onStopCellEditing(Runnable runnable) {
+    public NumberSlider onChange(Runnable runnable) {
         List<Runnable> runnables = onStopCellEditingRunnables.getOrDefault(this, new ArrayList<>());
         runnables.add(runnable);
         onStopCellEditingRunnables.put(this, runnables);

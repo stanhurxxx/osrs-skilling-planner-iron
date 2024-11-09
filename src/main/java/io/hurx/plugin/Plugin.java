@@ -4,6 +4,9 @@ import io.hurx.models.items.Item;
 import io.hurx.models.items.Items;
 
 import javax.inject.Inject;
+
+import io.hurx.models.views.ViewManagement;
+import io.hurx.repository.PluginRepository;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
@@ -36,11 +39,17 @@ import io.hurx.utils.Injects;
 @Slf4j
 @PluginDescriptor(name = "Ironman Skilling Planner", description = "Plans your skilling for max or max xp on ironman.")
 public class Plugin extends net.runelite.client.plugins.Plugin {
-
     /**
      * The home directory of the plugin.
      */
     public final static File HOME_DIR = new File(RuneLite.RUNELITE_DIR, "Ironman Skilling Planner");
+
+    /** GET The current account hash of the logged in user */
+    public static String accountHash() {
+        return accountHash;
+    }
+    /** The current account hash of the logged in user */
+    private static String accountHash;
 
     /**
      * The client instance.
@@ -84,11 +93,6 @@ public class Plugin extends net.runelite.client.plugins.Plugin {
     }
 
     private PluginPanel panel;
-
-    /**
-     * The account hash of the user
-     */
-    private Long accountHash = null;
 
     /**
      * Initializes the plugin and loads the necessary resources on startup.
@@ -140,15 +144,19 @@ public class Plugin extends net.runelite.client.plugins.Plugin {
             Injects.reset();
             Injects.setInjectable(Plugin.class, this);
 
-            accountHash = client.getAccountHash();
+            accountHash = Long.toString(client.getAccountHash());
 
             this.panel = new PluginPanel(this);
-            this.master = new PluginMaster(this.panel, new PluginRepository(this, Long.toString(accountHash)).initialize());
+            this.master = new PluginMaster(this.panel, new PluginRepository(this, accountHash).initialize());
 
             this.panel.setReady(true);
             this.panel.render();
 
-            // Force renew the view after initialization for the comboboxes and rendering to work properly
+            // Send onReady event to master
+            for (Runnable runnable : master.onReadyRunnables()) {
+                runnable.run();
+            }
+
             this.master.getViewProperty().replace(this.master.getViewProperty().get());
         }
         catch (Exception e) {
@@ -180,9 +188,9 @@ public class Plugin extends net.runelite.client.plugins.Plugin {
             if (this.panel == null) {
                 return;
             }
-            if (client.getAccountHash() != accountHash) {
-                accountHash = client.getAccountHash();
-                this.master = new PluginMaster(this.panel, new PluginRepository(this, Long.toString(accountHash)));
+            if (!Long.toString(client.getAccountHash()).equals(accountHash)) {
+                accountHash = Long.toString(client.getAccountHash());
+                this.master = new PluginMaster(this.panel, new PluginRepository(this, accountHash));
                 this.panel.render();
             }
             if (gameStateChanged.getGameState() == GameState.LOGGED_IN) {

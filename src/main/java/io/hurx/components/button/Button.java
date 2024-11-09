@@ -29,6 +29,9 @@ public class Button extends JButton implements EditableComponent {
     // Flag indicating whether the button is currently hovered.
     private boolean isHovered = false;
 
+    /** The runnables to run on click */
+    private List<Runnable> onClickRunnables = new ArrayList<>();
+
     public Button(String text) {
         super(text);
         Button button = this;
@@ -36,18 +39,25 @@ public class Button extends JButton implements EditableComponent {
         setBackground(Theme.TABLE_BG_COLOR_SELECTED);
         setFont(Theme.LABEL_FONT);
         setForeground(Color.WHITE);
-        addActionListener(new ActionListener() {
+        addMouseListener(new MouseAdapter() {
             @Override
-            public void actionPerformed(ActionEvent e) {
-                for (Runnable runnable : onStopCellEditingRunnables.getOrDefault(button, new ArrayList<>())) {
-                    runnable.run();
+            public void mouseReleased(MouseEvent e) {
+                if (e.getButton() == MouseEvent.BUTTON1) {
+                    for (Runnable runnable : onClickRunnables) {
+                        runnable.run();
+                    }
                 }
             }
         });
     }
 
+    public Button onClick(Runnable runnable) {
+        onClickRunnables.add(runnable);
+        return this;
+    }
+
     @Override
-    public Button onStopCellEditing(Runnable runnable) {
+    public Button onChange(Runnable runnable) {
         List<Runnable> runnables = onStopCellEditingRunnables.getOrDefault(this, new ArrayList<>());
         runnables.add(runnable);
         onStopCellEditingRunnables.put(this, runnables);

@@ -64,6 +64,9 @@ public class MenuButton extends JPanel implements EditableComponent {
     // Flag indicating whether the button is currently selected.
     private boolean isSelected = false;
 
+    /** The runnables to run on click */
+    private List<Runnable> onClickRunnables = new ArrayList<>();
+
     /**
      * Constructs a MenuButton with the specified icon.
      *
@@ -79,15 +82,20 @@ public class MenuButton extends JPanel implements EditableComponent {
         addMouseListener(new MouseAdapter() {
             @Override
             public void mouseReleased(MouseEvent e) {
-                for (Runnable runnable : onStopCellEditingRunnables.getOrDefault(button, new ArrayList<>())) {
+                for (Runnable runnable : onClickRunnables) {
                     runnable.run();
                 }
             }
         });
     }
 
+    public MenuButton onClick(Runnable runnable) {
+        onClickRunnables.add(runnable);
+        return this;
+    }
+
     @Override
-    public MenuButton onStopCellEditing(Runnable runnable) {
+    public MenuButton onChange(Runnable runnable) {
         List<Runnable> runnables = onStopCellEditingRunnables.getOrDefault(this, new ArrayList<>());
         runnables.add(runnable);
         onStopCellEditingRunnables.put(this, runnables);

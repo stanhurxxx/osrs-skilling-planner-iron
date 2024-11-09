@@ -59,7 +59,7 @@ public class ComboBoxCellEditor extends AbstractCellEditor implements TableCellE
      */
     @Override
     public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
-        if (value instanceof String) {
+        if (!(value instanceof ComboBox)) {
             box.setSelectedItem(value);
         }
         return box;

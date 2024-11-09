@@ -98,25 +98,46 @@ public class PluginPanel extends net.runelite.client.ui.PluginPanel {
         masterHierarchy.clear();
         if (!ready) return;
 
+        // Reload all outdated repositories
         reloadRepositories();
+
+        // Run all on change view runnables
         for (Runnable runnable : getPlugin().getMaster().getOnChangeViewRunnables()) {
             runnable.run();
         }
+
+        // Run all on before render runnables
+        List<ViewManagement.Entity.Container<?, ?, ?>> onBeforeRenderContainers = new ArrayList<>();
+        findOnBeforeRendersToExecuteInMaster(plugin.getMaster(), onBeforeRenderContainers);
+        for (int i = onBeforeRenderContainers.size() - 1; i >= 0; i --) {
+            ViewManagement.Entity.Container<?, ?, ?> container = onBeforeRenderContainers.get(i);
+            for (Runnable runnable : container.onnBeforeRenderRunnables()) {
+                runnable.run();
+            }
+        }
+
+        // Find what's to be rendered
         List<JComponent> toBeRendered = new ArrayList<>();
         findComponentsToBeRendered(toBeRendered);
+
+        // Do the actual render process
         List<JComponent> rendered = new ArrayList<>();
         renderMaster(rendered, toBeRendered, plugin.getMaster());
 
+        // Remove components that arent rendered.
         int renderedComponentCount = rendered.size();
         while (getComponentCount() > renderedComponentCount) {
             remove(renderedComponentCount);
         }
-        // Set the z order
+
+        // Set the z order of all components
         for (int i = 0; i < getComponentCount(); i ++) {
             Component c = getComponent(i);
             if (c == null) continue;
             setComponentZOrder(c, i);
         }
+
+        // Repaint the panel
         revalidate();
         repaint();
     }
@@ -135,6 +156,45 @@ public class PluginPanel extends net.runelite.client.ui.PluginPanel {
      *
      * @param master the master entity from which to reload repositories
      */
+    private void findOnBeforeRendersToExecuteInMaster(ViewManagement.Entity.Master<?, ?> master, List<ViewManagement.Entity.Container<?, ?, ?>> containers) {
+        if (reloadedMasters.contains(master)) return;
+        File file = new File(master.getRepository().generatePath() + ".json");
+        if (file.lastModified() != master.getRepository().lastModified()) {
+            master.getRepository().initialize(); // Initialize the repository associated with the master entity.
+        }
+        reloadedMasters.add(master); // Keep track of reloaded masters
+        for (ViewManagement.Entity.Container<?, ?, ?> container : master.getContainers()) {
+            findOnBeforeRendersToExecuteInContainer(container, containers); // Reload repositories in each container of the master.
+        }
+        for (ViewManagement.Entity.View<?, ?, ?> view : master.getViews()) {
+            for (ViewManagement.Entity.Container<?, ?, ?> container : view.getContainers()) {
+                findOnBeforeRendersToExecuteInContainer(container, containers); // Reload repositories in each container of the view.
+            }
+        }
+    }
+
+    /**
+     * Reloads repositories in the specified container.
+     *
+     * @param container the container from which to reload repositories
+     */
+    private void findOnBeforeRendersToExecuteInContainer(ViewManagement.Entity.Container<?, ?, ?> container, List<ViewManagement.Entity.Container<?, ?, ?>> containers) {
+        containers.add(container);
+        for (ViewManagement.Entity.Element element : container.getElements()) {
+            if (element instanceof ViewManagement.Entity.Master) {
+                findOnBeforeRendersToExecuteInMaster((ViewManagement.Entity.Master<?, ?>) element, containers); // Recursively reload repositories if the element is a master.
+            }
+            else if (element instanceof ViewManagement.Entity.Container) {
+                findOnBeforeRendersToExecuteInContainer((ViewManagement.Entity.Container<?, ?, ?>) element, containers);
+            }
+        }
+    }
+
+    /**
+     * Recursively reloads repositories in the specified master entity.
+     *
+     * @param master the master entity from which to reload repositories
+     */
     private void reloadRepositoriesInMaster(ViewManagement.Entity.Master<?, ?> master) {
         if (reloadedMasters.contains(master)) return;
         File file = new File(master.getRepository().generatePath() + ".json");
@@ -146,7 +206,9 @@ public class PluginPanel extends net.runelite.client.ui.PluginPanel {
             reloadRepositoriesInContainer(container); // Reload repositories in each container of the master.
         }
         for (ViewManagement.Entity.View<?, ?, ?> view : master.getViews()) {
-            reloadRepositoriesInView(view); // Reload repositories in each view associated with the master.
+            for (ViewManagement.Entity.Container<?, ?, ?> container : view.getContainers()) {
+                reloadRepositoriesInContainer(container); // Reload repositories in each container of the view.
+            }
         }
     }
 
@@ -163,17 +225,6 @@ public class PluginPanel extends net.runelite.client.ui.PluginPanel {
             else if (element instanceof ViewManagement.Entity.Container) {
                 reloadRepositoriesInContainer((ViewManagement.Entity.Container<?, ?, ?>) element);
             }
-        }
-    }
-
-    /**
-     * Reloads repositories in the specified view.
-     *
-     * @param view the view from which to reload repositories
-     */
-    private void reloadRepositoriesInView(ViewManagement.Entity.View<?, ?, ?> view) {
-        for (ViewManagement.Entity.Container<?, ?, ?> container : view.getContainers()) {
-            reloadRepositoriesInContainer(container); // Reload repositories in each container of the view.
         }
     }
 
@@ -202,19 +253,9 @@ public class PluginPanel extends net.runelite.client.ui.PluginPanel {
             findComponentsToBeRenderedInContainer(toBeRendered, container);
         }
         if (view != null) {
-            findComponentsToBeRenderedInView(toBeRendered, view);
-        }
-    }
-
-    /**
-     * Finds components to be rendered within a specific view.
-     *
-     * @param toBeRendered the list to populate with components to be rendered
-     * @param view the view entity to search within
-     */
-    private void findComponentsToBeRenderedInView(List<JComponent> toBeRendered, ViewManagement.Entity.View<?, ?, ?> view) {
-        for (ViewManagement.Entity.Container<?, ?, ?> container : view.getContainers()) {
-            findComponentsToBeRenderedInContainer(toBeRendered, container);
+            for (ViewManagement.Entity.Container<?, ?, ?> container : view.getContainers()) {
+                findComponentsToBeRenderedInContainer(toBeRendered, container);
+            }
         }
     }
 

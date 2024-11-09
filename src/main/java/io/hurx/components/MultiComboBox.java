@@ -18,7 +18,7 @@ import io.hurx.components.table.Table;
  * select options from drop-down menus in a tabular format.
  */
 public class MultiComboBox extends Table {
-    private JComboBox<?>[] controls; // Array of JComboBox controls for the table
+    private final JComboBox<?>[] controls; // Array of JComboBox controls for the table
 
     /**
      * Gets the JComboBox controls used in the table.
@@ -41,8 +41,8 @@ public class MultiComboBox extends Table {
 
     @Override
     public void prerender() throws Exception {
-        super.prerender();
         rows.clear();
         row(controls);
+        super.prerender();
     }
 }

@@ -10,5 +10,5 @@ public interface EditableComponent {
      * Fires a runnable when the cell editing is completed
      * @param runnable the runnable
      */
-    public EditableComponent onStopCellEditing(Runnable runnable);
+    public EditableComponent onChange(Runnable runnable);
 }

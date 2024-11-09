@@ -69,7 +69,7 @@ public class FormattedNumberTextField extends JFormattedTextField implements Edi
     }
 
     @Override
-    public FormattedNumberTextField onStopCellEditing(Runnable runnable) {
+    public FormattedNumberTextField onChange(Runnable runnable) {
         List<Runnable> runnables = onStopCellEditingRunnables.getOrDefault(this, new ArrayList<>());
         runnables.add(runnable);
         onStopCellEditingRunnables.put(this, runnables);

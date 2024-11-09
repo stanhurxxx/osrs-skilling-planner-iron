@@ -30,6 +30,7 @@ import io.hurx.utils.Theme;
 
 import java.awt.*;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -62,6 +63,9 @@ public class Table extends JTable {
 
     /** The hovered col index */
     private int hoveredColumnIndex = -1;
+
+    /** All the registered mouse adapters */
+    private List<MouseListener> mouseListeners = new ArrayList<>();
 
     /**
      * Constructs a new table instance with a default table model and configures
@@ -160,6 +164,12 @@ public class Table extends JTable {
                 render();
             }
         });
+    }
+
+    public Table mouseListener(MouseListener mouseListener) {
+        this.mouseListeners.add(mouseListener);
+        addMouseListener(mouseListener);
+        return this;
     }
 
     /**

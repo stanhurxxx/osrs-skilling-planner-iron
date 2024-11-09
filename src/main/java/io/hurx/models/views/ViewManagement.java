@@ -4,12 +4,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import javax.swing.JComboBox;
-import javax.swing.JComponent;
-import javax.swing.JLabel;
-import javax.swing.JList;
-import javax.swing.ListCellRenderer;
+import javax.swing.*;
 
+import io.hurx.components.comboBox.ComboBox;
 import io.hurx.models.IconPaths;
 import io.hurx.models.repository.Repository;
 import io.hurx.models.repository.Repository.Property;
@@ -233,6 +230,13 @@ public class ViewManagement {
             }
             private final List<Runnable> onOneToManySelectionChangesRunnables = new ArrayList<>();
 
+            /** GET The runnables to run on the onReady event */
+            public final List<Runnable> onReadyRunnables() {
+                return onReadyRunnables;
+            }
+            /** The runnables to run on the onReady event */
+            private final List<Runnable> onReadyRunnables = new ArrayList<>();
+
             /**
              * A list of one to many relations, for adding multiple combo boxes.
              */
@@ -369,7 +373,6 @@ public class ViewManagement {
                 for (Container<?, TRepository, TEnum> container : containers) {
                     this.containers.add((Container<Master<TRepository, TEnum>, TRepository, TEnum>)container);
                 }
-                this.getRoot().render();
             }
 
             /**
@@ -383,7 +386,6 @@ public class ViewManagement {
                 for (View<?, TRepository, TEnum> view : views) {
                     this.views.add((View<Master<TRepository, TEnum>, TRepository, TEnum>)view);
                 }
-                this.getRoot().render();
             }
 
             /**
@@ -403,7 +405,6 @@ public class ViewManagement {
                         this.containers.add((Container<Master<TRepository, TEnum>, TRepository, TEnum>)containers[i]);
                     }
                 }
-                this.getRoot().render();
             }
 
             /**
@@ -423,7 +424,6 @@ public class ViewManagement {
                         this.views.add((View<Master<TRepository, TEnum>, TRepository, TEnum>)views[i]);
                     }
                 }
-                this.getRoot().render();
             }
 
             /**
@@ -438,7 +438,6 @@ public class ViewManagement {
                         this.containers.remove(container);
                     }
                 }
-                this.getRoot().render();
             }
 
             /**
@@ -472,13 +471,12 @@ public class ViewManagement {
                         this.views.remove(view);
                     }
                 }
-                this.getRoot().render();
             }
 
             /**
              * Removes the specified views by indices from this {@code Master}.
              *
-             * @param views the views to remove
+             * @param indices the indices to remove
              */
             @SuppressWarnings("unchecked")
             public final void removeView(int ...indices) {
@@ -512,6 +510,9 @@ public class ViewManagement {
                 onChangeViewRunnables.add(runnable);
             }
 
+            /** Adds a runnable for the onReady event */
+            public final void onReady(Runnable runnable) { onReadyRunnables.add(runnable); }
+
             /**
              * Adds a {@code Runnable} action to be triggered when selection changes in one-to-many relationships.
              *
@@ -524,31 +525,31 @@ public class ViewManagement {
             /**
              * Creates a combo box for selecting views managed by this master.
              *
-             * @return a JComboBox populated with the views.
+             * @return a ComboBox populated with the views.
              */
-            public JComboBox<?> createViewsComboBox() {
-                JComboBox<ComboBoxModel> cb = new JComboBox<>();
+            public ComboBox<?> createViewsComboBox() {
+                ComboBox<ComboBoxModel> cb = new ComboBox<>();
                 View<?, ?, ?> activeView = getActiveView();
                 ComboBoxModel selected = null;
                 for (View<Master<TRepository, TEnum>, TRepository, TEnum> view : getViews()) {
                     if (view.getView().getName() != null) {
                         ComboBoxModel model = new ComboBoxModel(view);
                         cb.addItem(model);
-                        if (activeView == view) {
+                        if (model.isSelected()) {
                             selected = model;
                         }
                     }
                 }
-                if (oneToManyRelations.size() > 0) {
+                if (!oneToManyRelations.isEmpty()) {
                     for (OneToMany oneToMany : oneToManyRelations) {
                         for (Property<? extends Repository<? extends TRepository>> repository : oneToMany.listProperty.properties()) {
                             ComboBoxModel model = new ComboBoxModel(repository.get(), oneToMany);
                             cb.addItem(model);
-                            if (oneToMany.uuidProperty.get() != null && repository.get().getFileName() != null && oneToMany.uuidProperty.get().equals(repository.get().getFileName())) {
+                            if (model.isSelected()) {
                                 selected = model;
                             }
                         }
-                    }   
+                    }
                 }
                 if (selected != null) {
                     cb.setSelectedItem(selected);
@@ -562,18 +563,18 @@ public class ViewManagement {
                         boolean isSelected,
                         boolean cellHasFocus) {
 
-                        if (value == null || value.getName() == null) return new JLabel("");
+                        if (value == null) return new JLabel("");
 
                         String name = value.getName();
                         if (name == null) {
                             name = "";
                         }
-                            
+
                         JLabel label = new JLabel();
                         label.setOpaque(true);
                         label.setText(name);
-                        if (value.getIconPath() != null) {
-                            label.setIcon(Resources.loadImageIcon(value.getIconPath().getPath(), 18, 18));
+                        if (value.icon != null) {
+                            label.setIcon(value.icon);
                         }
 
                         // Set label color based on selection state
@@ -597,9 +598,8 @@ public class ViewManagement {
                 cb.addActionListener(new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
-                        @SuppressWarnings("unchecked")
                         ComboBoxModel selectedOption = (ComboBoxModel) cb.getSelectedItem();
-                        
+
                         if (selectedOption == null) return;
 
                         // Check if a View is selected
@@ -620,9 +620,9 @@ public class ViewManagement {
                         }
 
                         // Check if a Repository (via OneToMany) is selected
-                        else if (selectedOption.getFileName() != null && selectedOption.getOneToMany() != null) {
+                        else if (selectedOption.getUuid() != null && selectedOption.getOneToMany() != null) {
                             String currentUuid = selectedOption.getOneToMany().getUuidProperty().get();
-                            String newFileName = selectedOption.getFileName();
+                            String newFileName = selectedOption.getUuid();
                             if (currentUuid == null || !currentUuid.equals(newFileName)) {
                                 selectedOption.getOneToMany().getUuidProperty().replace(newFileName);
                                 repository.save();
@@ -644,9 +644,6 @@ public class ViewManagement {
              * 
              * <p>Instances of {@code OneToMany} are primarily used within {@code Master} classes to handle 
              * specific relationships and to facilitate view and repository management based on unique identifiers.
-             * 
-             * @param <TRepository> the type of the repository in the one-to-many relationship
-             * @param <TEnum> the enumeration type associated with different views within this relationship
              */
             public class OneToMany {
 
@@ -723,15 +720,15 @@ public class ViewManagement {
             public class ComboBoxModel {
                 
                 /** The file name associated with the repository, if any. */
-                private final String fileName;
+                private final String uuid;
 
                 /**
                  * Retrieves the file name associated with this model.
                  *
                  * @return the file name as a {@code String}
                  */
-                public final String getFileName() {
-                    return fileName;
+                public final String getUuid() {
+                    return uuid;
                 }
 
                 /** The name displayed for this model in the combo box. */
@@ -780,11 +777,10 @@ public class ViewManagement {
                 public boolean isSelected() {
                     if (oneToMany != null) {
                         String uuid1 = oneToMany.uuidProperty.get();
-                        String uuid2 = repository.getFileName();
-                        return uuid1 != null && uuid2 != null && uuid1.equals(uuid2);
+                        String uuid2 = repository.getUuid();
+                        return uuid1 != null && uuid1.equals(uuid2);
                     } else {
-                        View<?, ?, TEnum> activeView = getActiveView();
-                        return activeView != null && activeView.getView() == this.view;
+                        return this.view == viewProperty.get();
                     }
                 }
 
@@ -827,6 +823,13 @@ public class ViewManagement {
                     return repository;
                 }
 
+                /** GET The preloaded icon */
+                public Icon icon() {
+                    return icon;
+                }
+                /** The preloaded icon */
+                private final Icon icon;
+
                 /**
                  * Constructs a {@code ComboBoxModel} instance for a given repository and 
                  * associated {@code OneToMany} relationship.
@@ -837,10 +840,16 @@ public class ViewManagement {
                 public ComboBoxModel(Repository<?> repository, OneToMany oneToMany) {
                     this.name = repository.toString();
                     this.iconPath = repository.getIconPath();
-                    this.fileName = repository.getFileName();
+                    this.uuid = repository.getUuid();
                     this.view = null;
                     this.oneToMany = oneToMany;
                     this.repository = repository;
+                    if (iconPath != null) {
+                        this.icon = Resources.loadImageIcon(iconPath.getPath(), 18, 18);
+                    }
+                    else {
+                        this.icon = null;
+                    }
                 }
 
                 /**
@@ -851,8 +860,14 @@ public class ViewManagement {
                 public ComboBoxModel(View<?, ?, TEnum> view) {
                     this.name = view.getView().getName();
                     this.iconPath = view.getView().getIconPath();
-                    this.fileName = null;
+                    this.uuid = null;
                     this.view = view.getView();
+                    if (iconPath != null) {
+                        this.icon = Resources.loadImageIcon(iconPath.getPath(), 18, 18);
+                    }
+                    else {
+                        this.icon = null;
+                    }
                 }
             }
         }
@@ -902,6 +917,13 @@ public class ViewManagement {
                 return elements;
             }
 
+            /** GET The runnables to run before a render cycle */
+            public List<Runnable> onnBeforeRenderRunnables() {
+                return onBeforeRenderRunnables;
+            }
+            /** The runnables to run before a render cycle */
+            private List<Runnable> onBeforeRenderRunnables = new ArrayList<>();
+
             /**
             * Constructs a {@code Container} instance with the specified master entity.
             *
@@ -910,6 +932,11 @@ public class ViewManagement {
             public Container(TMaster master) {
                 super(master.getRoot());
                 this.master = master;
+            }
+
+            /** Adds a runnable to run before each render cycle. */
+            public void onBeforeRender(Runnable runnable) {
+                this.onBeforeRenderRunnables.add(runnable);
             }
 
             /**
@@ -922,7 +949,6 @@ public class ViewManagement {
                 for (Element element : elements) {
                     this.elements.add(element);
                 }
-                this.getRoot().render();
             }
 
             /**
@@ -958,7 +984,6 @@ public class ViewManagement {
                         this.elements.add(elements[i]);
                     }
                 }
-                this.getRoot().render();
             }
 
             /**
@@ -986,9 +1011,8 @@ public class ViewManagement {
             */
             public final void remove(Element ...elements) {
                 for (Element element : elements) {
-                    this.elements.remove(element);
+                    if (this.elements.contains(element)) this.elements.remove(element);
                 }
-                this.getRoot().render();
             }
 
             /**
@@ -1000,10 +1024,10 @@ public class ViewManagement {
             public final void remove(int ...indices) {
                 List<Element> toRemove = new ArrayList<>();
                 for (int i = 0; i < this.elements.size(); i++) {
-                    Element view = this.elements.get(i);
+                    Element element = this.elements.get(i);
                     for (int index : indices) {
                         if (index == i) {
-                            toRemove.add(view);
+                            toRemove.add(element);
                         }
                     }
                 }
@@ -1040,7 +1064,9 @@ public class ViewManagement {
              */
             public final void setComponent(JComponent component) {
                 this.component = component;
-                getRoot().render();
+                for (Runnable runnable : onSetComponentRunnables) {
+                    runnable.run();
+                }
             }
 
             /**
@@ -1068,7 +1094,7 @@ public class ViewManagement {
             private final List<Runnable> onUpdateRunnables = new ArrayList<>();
 
             /**
-             * Retrieves the list of runnables that will be executed when the 
+             * Retrieves the list of runnables that will be executed when the
              * component is updated.
              *
              * @return a list of runnables as {@code List<Runnable>}
@@ -1076,6 +1102,9 @@ public class ViewManagement {
             public final List<Runnable> getOnUpdateRunnables() {
                 return onUpdateRunnables;
             }
+
+            /** The runnables to run when the component is set */
+            private final List<Runnable> onSetComponentRunnables = new ArrayList<>();
 
             /**
              * Constructs a {@code Component} instance with the specified container 
@@ -1098,6 +1127,9 @@ public class ViewManagement {
             public final void onUpdate(Runnable runnable) {
                 this.onUpdateRunnables.add(runnable);
             }
+
+            /** Runs a runnable when this.setComponent has been called. */
+            public final void onSetComponent(Runnable runnable) { this.onSetComponentRunnables.add(runnable); }
         }
 
         /**
@@ -1178,7 +1210,6 @@ public class ViewManagement {
             @SafeVarargs
             public final void add(Container<TMaster, TRepository, TEnum> ...containers) {
                 this.containers.addAll(Arrays.asList(containers));
-                this.getMaster().getRoot().render();
             }
 
             /**
@@ -1197,7 +1228,6 @@ public class ViewManagement {
                         this.containers.add(containers[i]);
                     }
                 }
-                this.getMaster().getRoot().render();
             }
 
             /**
@@ -1210,7 +1240,6 @@ public class ViewManagement {
                 for (Container<TMaster, TRepository, TEnum> container : containers) {
                     this.containers.remove(container);
                 }
-                this.getMaster().getRoot().render();
             }
 
             /**

@@ -12,7 +12,7 @@ public class ComboBox<T> extends JComboBox<T> implements EditableComponent {
     }
 
     @Override
-    public ComboBox<T> onStopCellEditing(Runnable runnable) {
+    public ComboBox<T> onChange(Runnable runnable) {
         List<Runnable> runnables = onStopCellEditingRunnables.getOrDefault(this, new ArrayList<>());
         runnables.add(runnable);
         onStopCellEditingRunnables.put(this, runnables);
