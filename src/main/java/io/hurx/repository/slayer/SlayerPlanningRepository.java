@@ -52,7 +52,11 @@ public class SlayerPlanningRepository extends Repository<SlayerRepository> {
     @Override
     public SlayerPlanningRepository initialize() {
         try {
-            return (SlayerPlanningRepository)load();
+            SlayerPlanningRepository repository = (SlayerPlanningRepository)load();
+            if (repository == this) {
+                throw new Exception();
+            }
+            return repository;
         }
         catch (Exception ignored) {}
         return this;

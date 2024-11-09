@@ -149,15 +149,16 @@ public class Plugin extends net.runelite.client.plugins.Plugin {
             this.panel = new PluginPanel(this);
             this.master = new PluginMaster(this.panel, new PluginRepository(this, accountHash).initialize());
 
+            // Ready
             this.panel.setReady(true);
-            this.panel.render();
 
             // Send onReady event to master
             for (Runnable runnable : master.onReadyRunnables()) {
                 runnable.run();
             }
 
-            this.master.getViewProperty().replace(this.master.getViewProperty().get());
+            // Render
+            this.panel.render();
         }
         catch (Exception e) {
             System.out.println("Couldn't initialize PluginPanel: " + e.getMessage());

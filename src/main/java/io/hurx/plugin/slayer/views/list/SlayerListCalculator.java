@@ -7,98 +7,34 @@ import io.hurx.models.slayer.SlayerAssignment;
 import io.hurx.models.slayer.masters.SlayerMasters;
 import io.hurx.models.slayer.monsters.Monsters;
 import io.hurx.models.slayer.monsters.SlayerMonsters;
+import io.hurx.plugin.slayer.SlayerOptions;
 import io.hurx.repository.slayer.SlayerListRepository;
+import io.hurx.repository.slayer.SlayerPlanningRepository;
 
 import java.util.Map;
 import java.util.HashMap;
-import java.util.List;
-import java.util.ArrayList;
 
 /**
- * Provides calculator tools for Slayer tasks.
- * <p>
- * This class calculates various metrics related to Slayer assignments,
- * including experience rates, kill counts, and task frequency impacts.
- * </p>
+ * Calculator tools for slayer
  */
 public class SlayerListCalculator {
-    /**
-     * List of all instances of SlayerListCalculator.
-     */
-    public static List<SlayerListCalculator> instances = new ArrayList<>();
-    
-    /**
-     * The repository associated with this calculator, used to retrieve Slayer list data.
-     */
     public final SlayerListRepository repository;
 
-    /**
-     * Weight of tasks to be done.
-     * <p>
-     * This value is calculated based on the active Slayer assignments and their weights.
-     * </p>
-     */
     private float doWeight = 0;
-
-    /**
-     * Weight of tasks that have been skipped.
-     * <p>
-     * This value is calculated based on the Slayer assignments that have been skipped.
-     * </p>
-     */
     private float skippedWeight = 0;
 
-    /**
-     * A map to hold the impact of task frequency for each Slayer monster.
-     * <p>
-     * Each Slayer monster maps to another map of its variants and their respective frequency impacts.
-     * </p>
-     */
     private Map<SlayerMonsters, Map<Monsters, Float>> taskFrequencyImpact = new HashMap<>();
-
-    /**
-     * Total impact of task frequency across all Slayer monsters.
-     * <p>
-     * This value is the sum of all individual task frequency impacts.
-     * </p>
-     */
     private float totalTaskFrequencyImpact = 0;
 
-    /**
-     * A map to hold the calculated kills per hour for each Slayer monster.
-     * <p>
-     * Each Slayer monster maps to another map of its variants and their kills per hour.
-     * </p>
-     */
     private Map<SlayerMonsters, Map<Monsters, Float>> killsPerHour = new HashMap<>();
 
-    /**
-     * A map to hold the XP rates for each Slayer monster variant and skill.
-     * <p>
-     * Each Slayer monster maps to another map of its variants, which then maps to another
-     * map of skills and their respective XP rates.
-     * </p>
-     */
     private Map<SlayerMonsters, Map<Monsters, Map<Skills, Float>>> rates = new HashMap<>();
 
-
-    /**
-     * Constructs a SlayerListCalculator for the given SlayerListRepository.
-     *
-     * @param slayerListRepository the SlayerListRepository to be associated with this calculator
-     */
-    private SlayerListCalculator(SlayerListRepository slayerListRepository) {
+    public SlayerListCalculator(SlayerListRepository slayerListRepository) {
         this.repository = slayerListRepository;
-        calculate();
+        this.calculate();
     }
 
-    /**
-     * Performs calculations for Slayer metrics based on the current list and assignments.
-     * <p>
-     * This method calculates the weights, XP rates, kills per hour, and task frequency impacts
-     * based on Slayer assignments and monsters.
-     * </p>
-     */
     public void calculate() {
         SlayerListRepository list = getList();
 
@@ -114,14 +50,15 @@ public class SlayerListCalculator {
         skippedWeight = 0;
         for (SlayerAssignment assignment : master.getMaster().getAssignments()) {
             SlayerMonsters monster = assignment.getMonster();
-            if (list.blocked.contains(monster)) continue;
-            if (list.skipped.contains(monster)) {
+            if (list.blocked.get().contains(monster)) continue;
+            if (list.skipped.get().contains(monster)) {
                 skippedWeight += assignment.getWeight();
                 continue;
-            } else {
+            }
+            else {
                 doWeight += assignment.getWeight();
             }
-            
+
             // Calculate the impact of the task compared to all tasks in this list
             taskFrequencyImpact.put(assignment.getMonster(), taskFrequencyImpact.getOrDefault(assignment.getMonster(), new HashMap<>()));
             for (Monsters variant : monster.getMonsters()) {
@@ -136,8 +73,8 @@ public class SlayerListCalculator {
                 float meleeXpRate = list.meleeHourlyRates.get(variant, 0);
                 float hitpointsXpRate = meleeXpRate / 3;
                 float defenceXpRate = meleeStyle == CombatStyle.Defence
-                    ? meleeXpRate
-                    : meleeStyle == CombatStyle.Controlled
+                        ? meleeXpRate
+                        : meleeStyle == CombatStyle.Controlled
                         ? meleeXpRate / 3
                         : 0;
                 damage += meleeXpRate / 4;
@@ -145,7 +82,7 @@ public class SlayerListCalculator {
                 CombatStyle rangedStyle = list.rangedStyles.get(variant, CombatStyle.Ranged);
                 float rangedXpRate = list.rangedHourlyRates.get(variant, 0);
                 defenceXpRate += CombatStyle.getDefensiveRanged().contains(rangedStyle) ? rangedXpRate : 0;
-                hitpointsXpRate += (rangedXpRate + defenceXpRate) / 3; 
+                hitpointsXpRate += (rangedXpRate + defenceXpRate) / 3;
                 damage += (rangedXpRate + defenceXpRate) / 4;
 
                 CombatStyle magicStyle = list.magicStyles.get(variant, CombatStyle.Magic);
@@ -169,23 +106,23 @@ public class SlayerListCalculator {
                 int minExtended = assignment.getMinExtended() == null ? 0 : assignment.getMinExtended();
                 float variationPercentage = list.variations.get(monster, new Repository.Property.Map<>()).get(variant, 0);
                 float amountPerTask = isExtended
-                    ? minExtended + ((maxExtended - minExtended) / 2)
-                    : assignment.getMin() + ((assignment.getMax() - assignment.getMin()) / 2);
+                        ? minExtended + ((maxExtended - minExtended) / 2)
+                        : assignment.getMin() + ((assignment.getMax() - assignment.getMin()) / 2);
 
-                // XP rates
-                rates.get(monster).get(variant).put(Skills.Attack, 
-                    meleeStyle == CombatStyle.Attack
-                        ? meleeXpRate
-                        : meleeStyle == CombatStyle.Controlled
-                            ? meleeXpRate / 3
-                            : 0
+                // Xp rates
+                rates.get(monster).get(variant).put(Skills.Attack,
+                        meleeStyle == CombatStyle.Attack
+                                ? meleeXpRate
+                                : meleeStyle == CombatStyle.Controlled
+                                ? meleeXpRate / 3
+                                : 0
                 );
-                rates.get(monster).get(variant).put(Skills.Strength, 
-                    meleeStyle == CombatStyle.Strength
-                        ? meleeXpRate
-                        : meleeStyle == CombatStyle.Controlled
-                            ? meleeXpRate / 3
-                            : 0
+                rates.get(monster).get(variant).put(Skills.Strength,
+                        meleeStyle == CombatStyle.Strength
+                                ? meleeXpRate
+                                : meleeStyle == CombatStyle.Controlled
+                                ? meleeXpRate / 3
+                                : 0
                 );
                 rates.get(monster).get(variant).put(Skills.Defence, defenceXpRate);
                 rates.get(monster).get(variant).put(Skills.Hitpoints, hitpointsXpRate);
@@ -200,31 +137,15 @@ public class SlayerListCalculator {
         }
     }
 
-    /**
-     * Retrieves the SlayerListRepository associated with this calculator.
-     *
-     * @return the SlayerListRepository, or null if it cannot be found
-     */
     public SlayerListRepository getList() {
         SlayerListRepository list = repository.getParent().findListByFileName(repository.getUuid());
         return list;
     }
 
-    /**
-     * Calculates the overall XP earned per hour for Slayer tasks.
-     *
-     * @return the XP per hour for all skills
-     */
     public float getXpPerHour() {
         return this.getXpPerHour(null);
     }
 
-    /**
-     * Calculates the XP earned per hour for a specific skill.
-     *
-     * @param skill the skill to calculate XP for, or null for all skills
-     * @return the XP per hour for the specified skill
-     */
     public float getXpPerHour(Skills skill) {
         float xpPerHour = 0;
         for (SlayerMonsters monster : this.rates.keySet()) {
@@ -233,7 +154,7 @@ public class SlayerListCalculator {
             Map<Monsters, Map<Skills, Float>> monsterRates = this.rates.getOrDefault(monster, new HashMap<>());
             for (Monsters variant : monsterRates.keySet()) {
                 float taskFrequencyImpactVariant = this.taskFrequencyImpact.getOrDefault(monster, new HashMap<>()).getOrDefault(variant, 0f);
-                
+
                 Map<Skills, Float> variantRates = monsterRates.getOrDefault(variant, new HashMap<>());
                 for (Skills variantSkill : variantRates.keySet()) {
                     if (skill == null || skill == variantSkill) {
@@ -242,60 +163,126 @@ public class SlayerListCalculator {
                     }
                 }
             }
-            xpPerHour += effectiveXpPerHour;
+
+            xpPerHour += effectiveXpPerHour / this.totalTaskFrequencyImpact;
         }
         return xpPerHour;
     }
 
-    /**
-     * Returns the total weight for active tasks.
-     *
-     * @return the weight of tasks to be done
-     */
-    public float getDoWeight() {
-        return doWeight;
+    public float getKillCount(Monsters variant) {
+        return getKillCount(null, null, variant);
     }
 
-    /**
-     * Returns the total weight for skipped tasks.
-     *
-     * @return the weight of skipped tasks
-     */
-    public float getSkippedWeight() {
-        return skippedWeight;
+    public float getKillCount(SlayerMonsters monster) {
+        return getKillCount(null, monster, null);
     }
 
-    /**
-     * Retrieves the kill count for a specific monster variant.
-     *
-     * @param monster the monster variant to get the kill count for
-     * @return the kill count, or 0 if not found
-     */
-    public float getKillCount(Monsters monster) {
-        for (Map<Monsters, Float> value : this.killsPerHour.values()) {
-            if (value.containsKey(monster)) {
-                return value.get(monster);
+    public float getKillCount(SlayerMonsters monster, Monsters variant) {
+        return getKillCount(null, monster, variant);
+    }
+
+    public float getKillCount(String planningUuid) {
+        return getKillCount(planningUuid, null, null);
+    }
+
+    public float getKillCount(String planningUuid, Monsters variant) {
+        return getKillCount(planningUuid, null, variant);
+    }
+
+    public float getKillCount(String planningUuid, SlayerMonsters monster) {
+        return getKillCount(planningUuid, monster, null);
+    }
+
+    public float getKillCount(String planningUuid, SlayerMonsters monster, Monsters variant) {
+        SlayerListRepository list = getList();
+        if (list == null) return 0;
+        float killCount = 0;
+        float xpPerHour = getXpPerHour(Skills.Slayer);
+        for (SlayerPlanningRepository planning : repository.getParent().plannings.values()) {
+            if (planning.listUuid.isNull() || !planning.listUuid.get().equals(list.getUuid())
+                    || (planningUuid != null && !planning.getUuid().equals(planningUuid))) continue;
+
+            if (planning.listUuid.get().equals(list.getUuid()) && (planningUuid == null || planning.getUuid().equals(planningUuid))) {
+                float xpGained = planning.endXP.get() - planning.startXP.get();
+                float hours = xpGained / xpPerHour;
+                for (SlayerMonsters m : SlayerMonsters.values()) {
+                    if (monster != null && m != monster) continue;
+
+                    Map<Monsters, Float> variantKillsPerHour = this.killsPerHour.getOrDefault(m, new HashMap<>());
+
+                    for (Monsters v : m.getMonsters()) {
+                        if (v != null && v != variant) continue;
+
+                        float taskFrequencyImpact = getTaskFrequencyImpact(monster, v);
+                        float hoursVariant = taskFrequencyImpact / this.totalTaskFrequencyImpact * hours;
+                        float killsPerHour = variantKillsPerHour.getOrDefault(v, 0f);
+
+                        if (killsPerHour > 0) {
+                            killCount += hoursVariant / killsPerHour;
+                        }
+                    }
+                }
             }
         }
-        return 0;
+        return killCount;
     }
 
-    /**
-     * Retrieves the calculated task frequency impact for a specific monster.
-     *
-     * @param monster the monster to get the task frequency impact for
-     * @return the task frequency impact, or 0 if not found
-     */
+    public float getTaskFrequencyImpact(SlayerMonsters monster, Monsters variant) {
+        return this.taskFrequencyImpact.getOrDefault(monster, new HashMap<>()).getOrDefault(variant, 0f);
+    }
+
     public float getTaskFrequencyImpact(SlayerMonsters monster) {
-        return taskFrequencyImpact.getOrDefault(monster, new HashMap<>()).values().stream().reduce(0f, Float::sum);
+        float taskFrequencyImpact = 0;
+        for (Monsters monsterVariant : this.taskFrequencyImpact.getOrDefault(monster, new HashMap<>()).keySet()) {
+            taskFrequencyImpact += this.taskFrequencyImpact.get(monster).getOrDefault(monsterVariant, 0f);
+        }
+        return taskFrequencyImpact;
     }
 
-    /**
-     * Retrieves the total task frequency impact across all monsters.
-     *
-     * @return the total task frequency impact
-     */
-    public float getTotalTaskFrequencyImpact() {
-        return totalTaskFrequencyImpact;
+    public float getTaskFrequencyImpact(Monsters variant) {
+        float taskFrequencyImpact = 0;
+        for (SlayerMonsters monster : this.taskFrequencyImpact.keySet()) {
+            for (Monsters monsterVariant : this.taskFrequencyImpact.get(monster).keySet()) {
+                if (monsterVariant == variant) {
+                    taskFrequencyImpact += this.taskFrequencyImpact.get(monster).getOrDefault(monsterVariant, 0f);
+                }
+            }
+        }
+        return taskFrequencyImpact;
+    }
+
+    public float getBreakEvenSkipPercentage() {
+        if (getList() == null) return 0f;
+        float doWeight = getList().options.contains(SlayerOptions.SlayerCape)
+                ? this.doWeight * 1.1f
+                : this.doWeight;
+        float skipWeight = (getPointsPerTaskExcludingSkips() * doWeight / 30);
+        float totalWeight = skipWeight + doWeight;
+        return skipWeight / totalWeight * 100;
+    }
+
+    public float getPointsPerTaskIncludingSkips() {
+        return getPointsPerTaskExcludingSkips() - (getSkipPercentage() / getBreakEvenSkipPercentage() * getPointsPerTaskExcludingSkips());
+    }
+
+    public float getPointsPerTaskExcludingSkips() {
+        SlayerListRepository list = getList();
+        if (list == null) return 0;
+        if (list.options.contains(SlayerOptions.WesternProvincesEliteDiary) && list.master.get() == SlayerMasters.Nieve) {
+            return SlayerMasters.Duradel.getMaster().calculateAveragePointsPerTask();
+        }
+        return list.master.get().getMaster().calculateAveragePointsPerTask();
+    }
+
+    public float getSkipPercentage() {
+        if (getList() == null) return 0f;
+        float doWeight = getList().options.contains(SlayerOptions.SlayerCape)
+                ? this.doWeight * 1.1f
+                : this.doWeight;
+        float skipsPerTask = getList().options.contains(SlayerOptions.SlayerCape)
+                // 10% more do tasks once slayer cape
+                ? skippedWeight / (doWeight * 1.1f + skippedWeight)
+                : skippedWeight / (doWeight + skippedWeight);
+        return skipsPerTask * 100;
     }
 }

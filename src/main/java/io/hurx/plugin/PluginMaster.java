@@ -6,6 +6,7 @@ import io.hurx.components.comboBox.ComboBox;
 import io.hurx.models.views.ViewManagement;
 import io.hurx.plugin.overview.OverviewView;
 import io.hurx.plugin.profile.ProfileView;
+import io.hurx.plugin.slayer.SlayerView;
 import io.hurx.repository.PluginRepository;
 import io.hurx.utils.Theme;
 
@@ -29,15 +30,18 @@ public class PluginMaster extends ViewManagement.Entity.Master<PluginRepository,
 
     public PluginMaster(PluginPanel root, PluginRepository repository) {
         super(root, repository, PluginViews.values(), repository.view);
+
         // Triggers when the plugin is ready to be rendered
         onReady(() -> {
-            addView(new ProfileView(this));
-            addView(new OverviewView(this));
-
             // The main container, containing the navigation
             Container container = new Container(this);
             addContainer(container);
             onChangeView(container::onChangeView);
+
+            // Adds the views
+            addView(new OverviewView(this));
+            addView(new SlayerView(this));
+            addView(new ProfileView(this));
 
             // Add the profile container to container of the master, so it shows either
             // when the view is Profile, or when there is no profile selected.

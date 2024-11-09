@@ -17,6 +17,7 @@ import io.hurx.plugin.Plugin;
 import io.hurx.plugin.PluginViews;
 import io.hurx.repository.slayer.SlayerRepository;
 import io.hurx.utils.Injects;
+import io.hurx.utils.Json;
 
 /**
  * The PluginRepository class serves as the data repository for the Ironman Skilling Planner plugin.
@@ -75,6 +76,7 @@ public class ProfileRepository extends Repository<PluginRepository> {
      */
     public ProfileRepository(@JacksonInject PluginRepository pluginRepository) {
         super(pluginRepository, UUID.randomUUID().toString());
+        Injects.setInjectable(ProfileRepository.class, this);
     }
 
     /**
@@ -86,51 +88,21 @@ public class ProfileRepository extends Repository<PluginRepository> {
      */
     public ProfileRepository(@JacksonInject PluginRepository pluginRepository, String uuid) {
         super(pluginRepository, uuid);
+        Injects.setInjectable(ProfileRepository.class, this);
     }
 
     @Override
     public ProfileRepository initialize() {
         try {
-            Injects.setInjectable(ProfileRepository.class, this);
-            slayer.initialize();
-            Injects.setInjectable(SlayerRepository.class, this.slayer);
-            return (ProfileRepository)load();
-        }
-        catch (Exception ex) {
-            try {
-                // Initialize experience points for all skills to 0
-                for (Skills skill : Skills.values()) {
-                    xp.set(skill, 0f);
-                }
-
-                // Initialize bank and inventory quantities for all items to 0
-                for (Items item : Items.values()) {
-                    bank.set(item, 0f);
-                    inventory.set(item, 0f);
-                }
-
-                slayer.initialize();
-
-                save();
+            ProfileRepository loaded = (ProfileRepository) super.load();
+            if (loaded == this) {
+                throw new Exception();
             }
-            catch (Exception e) {
-                e.printStackTrace();
-            }
+            loaded.slayer = loaded.slayer.initialize();
+            return loaded;
+        } catch (Exception ex) {
+            slayer = slayer.initialize();
+            return this;
         }
-        return this;
-    }
-
-    @Override
-    public ProfileRepository load() throws IOException, PlayerNotLoggedInException, RepositoryFileCorruptedException {
-        Injects.setInjectable(ProfileRepository.class, this);
-        slayer.load();
-        Injects.setInjectable(SlayerRepository.class, this.slayer);
-        return (ProfileRepository) super.load();
-    }
-
-    @Override
-    public void save() {
-        slayer.save();
-        super.save();
     }
 }

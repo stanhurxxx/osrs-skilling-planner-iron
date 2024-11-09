@@ -4,7 +4,6 @@ import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.hurx.models.CombatStyle;
 import io.hurx.models.IconPaths;
 import io.hurx.models.repository.Repository;
@@ -49,7 +48,7 @@ public class SlayerListRepository extends Repository<SlayerRepository> {
     public Repository.Property<String> name = new Repository.Property<String>("Untitled");
     
     /** The sub-view of the Slayer list (e.g., ManageTasks). */
-    public Repository.Property<SlayerListViews> subView = new Repository.Property<>(SlayerListViews.ManageTasks);
+    public Repository.Property<SlayerListViews> view = new Repository.Property<>(SlayerListViews.ManageTasks);
     
     /** The current Slayer master. */
     public Repository.Property<SlayerMasters> master = new Repository.Property<>(SlayerMasters.Duradel);
@@ -135,7 +134,11 @@ public class SlayerListRepository extends Repository<SlayerRepository> {
     @Override
     public SlayerListRepository initialize() {
         try {
-            return (SlayerListRepository)load();
+            SlayerListRepository repository = (SlayerListRepository)load();
+            if (repository == this) {
+                throw new Exception();
+            }
+            return repository;
         }
         catch (Exception ex) {
             if (!isInitialized) {

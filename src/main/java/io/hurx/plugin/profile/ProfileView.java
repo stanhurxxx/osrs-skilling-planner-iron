@@ -100,7 +100,8 @@ public class ProfileView extends ViewManagement.Entity.View<PluginMaster, Plugin
         private void create() {
             ProfileRepository profileRepository = new ProfileRepository(getMaster().getRepository(), UUID.randomUUID().toString());
             profileRepository.name.replace(textField.getText());
-            profileRepository.initialize();
+            profileRepository = profileRepository.initialize();
+            profileRepository.save();
 
             getMaster().getRepository().profiles.add(profileRepository);
             getMaster().getRepository().account.profileUuid.replace(profileRepository.getUuid());
@@ -316,7 +317,7 @@ public class ProfileView extends ViewManagement.Entity.View<PluginMaster, Plugin
                     );
                     if (newName == null) return;
                     if (newName.isEmpty()) newName = "Unnamed profile";
-                    ProfileRepository duplicate = (ProfileRepository) profile.duplicate();
+                    ProfileRepository duplicate = (ProfileRepository) profile.duplicate().copy();
                     duplicate.name.replace(newName);
                     getContainer().getMaster().getRepository().profiles.add(duplicate);
                     getContainer().getMaster().getRepository().save();

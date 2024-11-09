@@ -2,6 +2,7 @@ package io.hurx.plugin.slayer;
 
 import javax.swing.JLabel;
 
+import io.hurx.models.repository.Repository;
 import io.hurx.models.views.ViewManagement;
 import io.hurx.plugin.PluginMaster;
 import io.hurx.plugin.PluginViews;
@@ -40,8 +41,19 @@ public class SlayerView extends ViewManagement.Entity.View<PluginMaster, PluginR
     public static class Container extends ViewManagement.Entity.Container<PluginMaster, PluginRepository, PluginViews> {
         public Container(PluginMaster master) {
             super(master);
-            ProfileRepository profileRepository = master.getRepository().account.getProfile();
-            add(new SlayerMaster(master.getRoot(), new SlayerRepository(profileRepository).initialize()));
+            master.getRepository().account.profileUuid.listen(new Repository.Property.Listener<String>() {
+                @Override
+                public void onSet(String oldValue, String newValue) {
+                    load(master.getRepository().account.getProfile());
+                }
+            });
+            load(master.getRepository().account.getProfile());
+        }
+
+        private void load(ProfileRepository profileRepository) {
+            removeAll();
+            if (profileRepository == null) return;
+            add(new SlayerMaster(getMaster().getRoot(), new SlayerRepository(profileRepository).initialize()));
         }
     }
 

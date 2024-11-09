@@ -615,7 +615,6 @@ public class ViewManagement {
                                     runnable.run();
                                 }
                                 getRoot().render();
-                                System.out.println("Repository saved.");
                             }
                         }
 
@@ -775,12 +774,11 @@ public class ViewManagement {
                  * @return {@code true} if this model is selected; {@code false} otherwise
                  */
                 public boolean isSelected() {
+                    View<?, ?, ?> view = getActiveView();
                     if (oneToMany != null) {
-                        String uuid1 = oneToMany.uuidProperty.get();
-                        String uuid2 = repository.getUuid();
-                        return uuid1 != null && uuid1.equals(uuid2);
+                        return oneToMany.getView().view == view.view && !oneToMany.getUuidProperty().isNull() && getUuid() != null && oneToMany.getUuidProperty().get().equals(getUuid());
                     } else {
-                        return this.view == viewProperty.get();
+                        return this.getView() == view.view;
                     }
                 }
 

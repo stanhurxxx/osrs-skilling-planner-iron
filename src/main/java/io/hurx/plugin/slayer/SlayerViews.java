@@ -19,7 +19,10 @@ public enum SlayerViews implements Views {
     /**
      * Planner view, allowing users to plan their Slayer tasks and strategies.
      */
-    Planner("Planner", IconPaths.SkillEHP);
+    Planner("Planner", IconPaths.SkillEHP),
+
+    /** When a slayer list is selected and not a view */
+    List(null, null);
 
     // A field to store the string value of the view name
     private final String name;

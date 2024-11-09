@@ -39,7 +39,11 @@ public class AccountRepository extends Repository<PluginRepository> {
     @Override
     public AccountRepository initialize() {
         try {
-            load();
+            AccountRepository repository = (AccountRepository) load();
+            if (repository == this) {
+                throw new Exception();
+            }
+            return repository;
         }
         catch (Exception ignored) {}
         return this;

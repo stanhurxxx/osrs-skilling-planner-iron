@@ -388,64 +388,64 @@ public abstract class Repository<R extends Repository<?>> {
         String fileName = generatePath(); // Generate the path for the cache file
 
         // Recursively save
-        for (Field field : getClass().getDeclaredFields()) {
-            if (Repository.class.isAssignableFrom(field.getType())) {
-                try {
-                    Repository<Repository<R>> repository = (Repository<Repository<R>>) field.get(this);
-                    if (repository != null) {
-                        repository.parent = this;
-                        repository.save();
-                    }
-                } catch (IllegalAccessException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-            else if (Repository.Property.Map.class.isAssignableFrom(field.getType())) {
-                try {
-                    Repository.Property.Map<Object, Object> property = (Repository.Property.Map<Object, Object>) field.get(this);
-                    if (property != null) {
-                        for (Object key : property.keySet()) {
-                            Object value = property.get(key);
-                            if (value instanceof Repository) {
-                                Repository<Repository<R>> repository = (Repository<Repository<R>>) value;
-                                repository.parent = this;
-                                repository.save();
-                            }
-                        }
-                    }
-                } catch (IllegalAccessException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-            else if (Repository.Property.List.class.isAssignableFrom(field.getType())) {
-                try {
-                    Property.List<Object> property = (Property.List<Object>) field.get(this);
-                    if (property != null) {
-                        for (Object value : property.values()) {
-                            if (value instanceof Repository) {
-                                Repository<Repository<R>> repository = (Repository<Repository<R>>) value;
-                                repository.parent = this;
-                                repository.save();
-                            }
-                        }
-                    }
-                } catch (IllegalAccessException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-            else if (Repository.Property.class.isAssignableFrom(field.getType())) {
-                try {
-                    Property<Object> property = (Property<Object>) field.get(this);
-                    if (property != null && property.get() instanceof Repository) {
-                        Repository<Repository<R>> repository = (Repository<Repository<R>>) property.get();
-                        repository.parent = this;
-                        repository.save();
-                    }
-                } catch (IllegalAccessException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        }
+//        for (Field field : getClass().getDeclaredFields()) {
+//            if (Repository.class.isAssignableFrom(field.getType())) {
+//                try {
+//                    Repository<Repository<R>> repository = (Repository<Repository<R>>) field.get(this);
+//                    if (repository != null) {
+//                        repository.parent = this;
+//                        repository.save();
+//                    }
+//                } catch (IllegalAccessException e) {
+//                    throw new RuntimeException(e);
+//                }
+//            }
+//            else if (Repository.Property.Map.class.isAssignableFrom(field.getType())) {
+//                try {
+//                    Repository.Property.Map<Object, Object> property = (Repository.Property.Map<Object, Object>) field.get(this);
+//                    if (property != null) {
+//                        for (Object key : property.keySet()) {
+//                            Object value = property.get(key);
+//                            if (value instanceof Repository) {
+//                                Repository<Repository<R>> repository = (Repository<Repository<R>>) value;
+//                                repository.parent = this;
+//                                repository.save();
+//                            }
+//                        }
+//                    }
+//                } catch (IllegalAccessException e) {
+//                    throw new RuntimeException(e);
+//                }
+//            }
+//            else if (Repository.Property.List.class.isAssignableFrom(field.getType())) {
+//                try {
+//                    Property.List<Object> property = (Property.List<Object>) field.get(this);
+//                    if (property != null) {
+//                        for (Object value : property.values()) {
+//                            if (value instanceof Repository) {
+//                                Repository<Repository<R>> repository = (Repository<Repository<R>>) value;
+//                                repository.parent = this;
+//                                repository.save();
+//                            }
+//                        }
+//                    }
+//                } catch (IllegalAccessException e) {
+//                    throw new RuntimeException(e);
+//                }
+//            }
+//            else if (Repository.Property.class.isAssignableFrom(field.getType())) {
+//                try {
+//                    Property<Object> property = (Property<Object>) field.get(this);
+//                    if (property != null && property.get() instanceof Repository) {
+//                        Repository<Repository<R>> repository = (Repository<Repository<R>>) property.get();
+//                        repository.parent = this;
+//                        repository.save();
+//                    }
+//                } catch (IllegalAccessException e) {
+//                    throw new RuntimeException(e);
+//                }
+//            }
+//        }
 
         if (lastModified != 0 && !isDirty() && new File(fileName + ".json").exists()) return;
         if (fileName == null) return; // Exit if the file name is invalid
@@ -476,6 +476,7 @@ public abstract class Repository<R extends Repository<?>> {
      * @throws RepositoryFileCorruptedException When the cache file is corrupted.
      * @throws IOException When the cache file cannot be opened.
      */
+    @SuppressWarnings("unchecked")
     public Repository<R> load() throws PlayerNotLoggedInException, RepositoryFileCorruptedException, IOException {
         String fileName = generatePath(); // Get the file name to load
 
@@ -488,6 +489,8 @@ public abstract class Repository<R extends Repository<?>> {
         if (Injects.getRepositoriesByFileName().containsKey(getUuid())) {
             loadOneToManies();
         }
+
+        Injects.setInjectable((Class<Repository<R>>)getClass(), this);
 
         // Check if the JSON file exists
         File file = new File(fileName + ".json");
@@ -513,6 +516,7 @@ public abstract class Repository<R extends Repository<?>> {
                         deserializeField(field, data, this);
                     }
                     existing.isDirty(false);
+                    Injects.setInjectable((Class<Repository<R>>)getClass(), existing);
                     return existing;
                 }
                 // New; Add the new repository to the map
@@ -520,6 +524,7 @@ public abstract class Repository<R extends Repository<?>> {
                     Injects.getRepositoriesByFileName().put(data.getUuid(), data);
                     loadOneToManies();
                     data.isDirty(false);
+                    Injects.setInjectable((Class<Repository<R>>)getClass(), data);
                     return data;
                 }
             } catch (Exception e) {
@@ -656,7 +661,7 @@ public abstract class Repository<R extends Repository<?>> {
         String dirName = this.getDirName();
         String path = dirName == null || dirName.equals(uuid)
             ? ""
-            : dirName + "/"; // Start with the current file name
+            : dirName; // Start with the current file name
         Repository<?> parent = this.getParent(); // Get the parent repository
 
         // Construct the full path by traversing up the parent hierarchy
@@ -765,6 +770,11 @@ public abstract class Repository<R extends Repository<?>> {
         @JsonIgnore
         public V get() {
             return value; // Return the current value
+        }
+
+        /** Checks if the value is null */
+        public boolean isNull() {
+            return this.value == null;
         }
 
         /**
@@ -1658,6 +1668,7 @@ public abstract class Repository<R extends Repository<?>> {
                                         }
                                     } catch (Exception e) {
                                         System.out.println("Couldn't instantiate repository.");
+                                        e.printStackTrace();
                                         throw new RuntimeException(e);
                                     }
                                 }
@@ -1713,6 +1724,7 @@ public abstract class Repository<R extends Repository<?>> {
                                             }
                                         } catch (Exception e) {
                                             System.out.println("Couldn't instantiate repository.");
+                                            e.printStackTrace();
                                             throw new RuntimeException(e);
                                         }
                                     }
@@ -1793,7 +1805,7 @@ public abstract class Repository<R extends Repository<?>> {
                                 }
                                 gen.writeEndArray();
                                 continue loop;
-                            } else {
+                            } else if (!Json.includeSerializationIgnoreFields()) {
                                 try {
                                     // Get the value of the field from the object
                                     Object fieldValue = field.get(value);
@@ -1848,9 +1860,9 @@ public abstract class Repository<R extends Repository<?>> {
 
             // Temporarily change the injectables, store it in a variable
             Object classInstance = Injects.getInjectableValues().get(getClazz());
-            if (Json.includeSerializationIgnoreFields()) {
+//            if (Json.includeSerializationIgnoreFields()) {
                 Injects.setInjectable((Class<V>)getClazz(), instance);
-            }
+//            }
 
             // Deserialization
             if (node.isObject()) {

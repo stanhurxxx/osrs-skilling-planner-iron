@@ -46,8 +46,10 @@ public class PluginRepository extends Repository<PluginRepository> {
     public PluginRepository initialize() {
         try {
             PluginRepository repository = (PluginRepository)this.load();
-            Injects.setInjectable(PluginRepository.class, this);
-            account.initialize();
+            if (repository == this) {
+                throw new Exception();
+            }
+            repository.account = repository.account.initialize();
             return repository;
         }
         catch (Exception ex) {

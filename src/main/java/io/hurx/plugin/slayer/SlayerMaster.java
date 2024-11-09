@@ -2,6 +2,8 @@ package io.hurx.plugin.slayer;
 
 import io.hurx.models.views.ViewManagement;
 import io.hurx.plugin.PluginPanel;
+import io.hurx.plugin.slayer.views.overview.SlayerOverviewView;
+import io.hurx.plugin.slayer.views.planner.SlayerPlannerView;
 import io.hurx.repository.slayer.SlayerRepository;
 import io.hurx.plugin.slayer.views.list.SlayerListView;
 
@@ -23,5 +25,11 @@ public class SlayerMaster extends ViewManagement.Entity.Master<SlayerRepository,
             repository.listUuid,
             new SlayerListView(this)
         ));
+        addView(new SlayerOverviewView(this));
+        addView(new SlayerPlannerView(this));
+        // Initialize the plugin master with the new views
+        for (Runnable runnable : getRoot().getPlugin().getMaster().getOnChangeViewRunnables()) {
+            runnable.run();
+        }
     }
 }

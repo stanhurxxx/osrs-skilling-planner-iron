@@ -42,9 +42,10 @@ public class SlayerRepository extends Repository<ProfileRepository> {
     public SlayerListRepository getList() {
         String listUuid = this.listUuid.get();
         if (listUuid == null) return null;
-        for (Repository.Property<SlayerListRepository> list : lists.properties()) {
-            if (list.get().getUuid().equals(listUuid)) {
-                return list.get();
+        for (SlayerListRepository list : lists.values()) {
+            if (list == null) continue;
+            if (list.getUuid().equals(listUuid)) {
+                return list;
             }
         }
         return null;
@@ -93,7 +94,11 @@ public class SlayerRepository extends Repository<ProfileRepository> {
     @Override
     public SlayerRepository initialize() {
         try {
-            return (SlayerRepository)load();
+            SlayerRepository loaded = (SlayerRepository)load();
+            if (loaded == this) {
+                throw new Exception();
+            }
+            return loaded;
         }
         catch (Exception ex) {
             System.out.println("Iniitalize slayer..");
