@@ -1,6 +1,7 @@
 package io.hurx.plugin.slayer.views.list;
 
 import io.hurx.components.Label;
+import io.hurx.components.table.Table;
 import io.hurx.models.IconPaths;
 import io.hurx.models.Skills;
 import io.hurx.models.views.ViewManagement;
@@ -27,10 +28,10 @@ public class SlayerListMaster extends ViewManagement.Entity.Master<SlayerListRep
             repository.view
         );
         calculator = new SlayerListCalculator(repository);
+        addContainer(new Container(this));
         addView(new SlayerListManageTasksView(this));
         addView(new SlayerListManageXPRatesView(this));
         addView(new SlayerListManageOptionsView(this));
-        addContainer(new Container(this));
         // Initialize the plugin master with the new views
         for (Runnable runnable : getRoot().getPlugin().getMaster().getOnChangeViewRunnables()) {
             runnable.run();
@@ -87,11 +88,9 @@ public class SlayerListMaster extends ViewManagement.Entity.Master<SlayerListRep
                         new Label.Plain("Hours left"),
                         new Label.Plain(NumberFormat.getInstance(Locale.US).format((float) Math.round(master.calculateHoursLeft() * 100) / 100))
                     })
+                    .render()
             );
-        }
-
-        public static class Table extends io.hurx.components.table.Table {
-
+            add(new Label.Title("Test"));
         }
     }
 }

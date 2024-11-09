@@ -292,10 +292,9 @@ public class PluginPanel extends net.runelite.client.ui.PluginPanel {
         for (ViewManagement.Entity.Container<?, ?, ?> container : master.getContainers()) {
             renderContainer(rendered, toBeRendered, container);
         }
-        for (ViewManagement.Entity.View<?, ?, ?> otherView : master.getViews()) {
-            if (otherView == view) {
-                renderView(rendered, toBeRendered, view);
-            }
+
+        if (view != null) {
+            renderView(rendered, toBeRendered, view);
         }
     }
 

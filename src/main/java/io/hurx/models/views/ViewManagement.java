@@ -777,8 +777,10 @@ public class ViewManagement {
                     View<?, ?, ?> view = getActiveView();
                     if (oneToMany != null) {
                         return oneToMany.getView().view == view.view && !oneToMany.getUuidProperty().isNull() && getUuid() != null && oneToMany.getUuidProperty().get().equals(getUuid());
-                    } else {
+                    } else if (view != null) {
                         return this.getView() == view.view;
+                    } else {
+                        return false;
                     }
                 }
 

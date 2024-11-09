@@ -7,6 +7,8 @@ import io.hurx.plugin.slayer.SlayerViews;
 import io.hurx.repository.slayer.SlayerListRepository;
 import io.hurx.repository.slayer.SlayerRepository;
 
+import javax.swing.*;
+
 /**
  * The view for a slayer list
  */
