@@ -70,6 +70,7 @@ public class ProfileView extends ViewManagement.Entity.View<PluginMaster, Plugin
             // Set a .json filter to show only JSON files in the dialog
             FileNameExtensionFilter jsonFilter = new FileNameExtensionFilter("JSON files (*.json)", "json");
             fileChooser.setFileFilter(jsonFilter);
+            fileChooser.setDialogTitle("Import profile");
 
             // Open the load dialog
             int userSelection = fileChooser.showOpenDialog(null);
@@ -276,6 +277,7 @@ public class ProfileView extends ViewManagement.Entity.View<PluginMaster, Plugin
                     JFileChooser chooser = new JFileChooser();
                     FileNameExtensionFilter filter = new FileNameExtensionFilter("JSON Files (*.json)", "json");
                     chooser.setFileFilter(filter);
+                    chooser.setDialogTitle("Export profile \"" + profile.name.get() + "\"");
                     chooser.setSelectedFile(new File(profile.name.get() + ".json"));
                     int userSelection = chooser.showSaveDialog(null);
                     if (userSelection == JFileChooser.APPROVE_OPTION) {
@@ -312,7 +314,8 @@ public class ProfileView extends ViewManagement.Entity.View<PluginMaster, Plugin
                         null,
                         profile.name.get()
                     );
-                    if (newName == null || newName.isEmpty()) newName = "Unnamed profile";
+                    if (newName == null) return;
+                    if (newName.isEmpty()) newName = "Unnamed profile";
                     ProfileRepository duplicate = (ProfileRepository) profile.duplicate();
                     duplicate.name.replace(newName);
                     getContainer().getMaster().getRepository().profiles.add(duplicate);
