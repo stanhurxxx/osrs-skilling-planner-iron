@@ -261,11 +261,24 @@ public abstract class Repository<R extends Repository<?>> {
         return repository;
     }
 
-    /** Copies the repository */
+    /** Copies the repository (changes uuid on current instance, for new instance use duplicate) */
     public Repository<R> copy() {
         this.uuid = generateUuid();
         save();
         return this;
+    }
+
+    /** Duplicates a repository (copy with new instance) */
+    @SuppressWarnings("unchecked")
+    public Repository<R> duplicate() {
+        try {
+            Json.includeSerializationIgnoreFields(true);
+            Repository<R> upload = (Repository<R>) upload(Json.objectMapper.writeValueAsString(this));
+            Json.includeSerializationIgnoreFields(false);
+            return upload.copy();
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /** Exports a repository to json */

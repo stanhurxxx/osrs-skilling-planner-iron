@@ -85,16 +85,13 @@ public class ProfileView extends ViewManagement.Entity.View<PluginMaster, Plugin
 
                     getMaster().getRepository().profiles.add(profileRepository);
                     getMaster().getRepository().save();
+
                     getRoot().render();
                 } catch (Exception e) {
                     JOptionPane.showMessageDialog(null, "Error importing profile: " + e.getMessage());
                     e.printStackTrace();
                 }
                 Json.includeSerializationIgnoreFields(false);
-            }
-
-            // TODO: Save cache
-            if (reload) {
             }
         }
 
@@ -304,12 +301,42 @@ public class ProfileView extends ViewManagement.Entity.View<PluginMaster, Plugin
                     }
                 }
 
+                /** Duplicates the profile */
                 public void duplicate() {
-                    // TODO: duplicate
+                    String newName = (String) JOptionPane.showInputDialog(
+                            null,
+                            "Enter new name:",
+                            "Duplicating profile \"" + profile.name.get() + "\"",
+                            JOptionPane.PLAIN_MESSAGE,
+                            null,
+                            null,
+                            profile.name.get()
+                    );
+                    if (newName == null) newName = "Unnamed profile";
+                    ProfileRepository duplicate = (ProfileRepository) profile.duplicate();
+                    duplicate.name.replace(newName);
+                    getContainer().getMaster().getRepository().profiles.add(duplicate);
+                    getContainer().getMaster().getRepository().save();
+                    getRoot().render();
                 }
 
+                /** Deletes this profile */
                 public void delete() {
-                    // TODO: delete
+                    int option = JOptionPane.showOptionDialog(
+                        null,
+                        "Are you sure you wish to delete the profile \"" + profile.name.get() + "\"? This can not be undone.",
+                        "Delete profile",
+                        JOptionPane.YES_NO_CANCEL_OPTION,
+                        JOptionPane.QUESTION_MESSAGE,
+                        null,
+                        new Object[] { "Yes", "No" },
+                        null
+                    );
+                    if (option == JOptionPane.YES_OPTION) {
+                        getContainer().getMaster().getRepository().profiles.remove(profile);
+                        getContainer().getMaster().getRepository().save();
+                        getRoot().render();
+                    }
                 }
             }
         }
