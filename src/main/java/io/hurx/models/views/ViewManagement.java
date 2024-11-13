@@ -1,5 +1,6 @@
 package io.hurx.models.views;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -19,6 +20,7 @@ import io.hurx.utils.Theme;
 import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.function.Supplier;
 
 /**
  * The {@code ViewManagement} class provides a comprehensive framework for managing GUI views,
@@ -31,16 +33,12 @@ import java.awt.event.ActionListener;
  * <ul>
  *     <li>Managing views and repositories through a {@link Master} class hierarchy.</li>
  *     <li>Defining and updating GUI elements using {@link ComboBoxModel} for dynamic selection and display.</li>
- *     <li>Supporting flexible component structures, including {@link Container} and {@link Component} classes.</li>
  *     <li>Enabling one-to-many relationships between repositories via the {@link OneToMany} class.</li>
  *     <li>Modularizing view management to allow customization and scalability.</li>
  * </ul>
  *
  * <p>This class is designed for applications with complex data interactions and multi-view requirements,
  * providing a structured, reusable approach to GUI component management.
- *
- * @param <TRepository> the type representing the repository model
- * @param <TEnum>       the type representing the views enumeration
  */
 public class ViewManagement {
     /**
@@ -152,20 +150,29 @@ public class ViewManagement {
                     }
                 }
                 for (View<Master<TRepository, TEnum>, TRepository, TEnum> view : views) {
-                    if (view.getView() == viewProperty.get()) {
+                    Repository.Property<?> property = viewProperty.get();
+                    if (property == null) {
+                        continue;
+                    }
+                    if (view.getView() == property.get()) {
                         return view;
                     }
                 }
                 return null;
             }
         
+            @SuppressWarnings("unchecked")
+            public void setRepository(Repository<?> repository) {
+                this.repository = (TRepository) repository;
+            }
             /**
              * Retrieves the repository associated with this {@code Master}.
              *
              * @return the {@code TRepository} instance associated with this {@code Master}
              */
+            @SuppressWarnings("unchecked")
             public final TRepository getRepository() {
-                return repository;
+                return (TRepository) Repository.registered.get(repository.generatePath());
             }
             private TRepository repository;
 
@@ -205,9 +212,9 @@ public class ViewManagement {
              * @return the {@code Repository.Property} representing the current view
              */
             public final Repository.Property<TEnum> getViewProperty() {
-                return viewProperty;
+                return viewProperty.get();
             }
-            private final Repository.Property<TEnum> viewProperty;
+            private final Supplier<Repository.Property<TEnum>> viewProperty;
 
             /**
              * Retrieves the list of {@code Runnable} actions triggered on view change.
@@ -240,6 +247,9 @@ public class ViewManagement {
             /**
              * A list of one to many relations, for adding multiple combo boxes.
              */
+            public List<OneToMany> oneToManyRelations() {
+                return oneToManyRelations;
+            }
             private List<OneToMany> oneToManyRelations = new ArrayList<>(); 
 
             /**
@@ -250,7 +260,7 @@ public class ViewManagement {
              * @param viewsEnum the enumerations representing available views
              * @param viewProperty the property representing the active view
              */
-            public Master(PluginPanel root, TRepository repository, TEnum[] viewsEnum, Repository.Property<TEnum> viewProperty) {
+            public Master(PluginPanel root, TRepository repository, TEnum[] viewsEnum, Supplier<Property<TEnum>> viewProperty) {
                 super(root);
                 this.repository = repository;
                 this.viewsEnum = viewsEnum;
@@ -285,7 +295,6 @@ public class ViewManagement {
 
             /**
              * Finds the deepest master in a view
-             * @param master the master
              * @param traverse the traversed list
              */
             private void findDeepestMasterInView(View<?, ?, ?> view, List<Master<?, ?>> traverse) {
@@ -296,7 +305,6 @@ public class ViewManagement {
 
             /**
              * Finds the deepest master in a container
-             * @param master the master
              * @param traverse the traversed list
              */
             private void findDeepestMasterInContainer(Container<?, ?, ?> container, List<Master<?, ?>> traverse) {
@@ -522,6 +530,56 @@ public class ViewManagement {
                 onOneToManySelectionChangesRunnables.add(runnable);
             }
 
+            /** Finds the repository belonging to a property in a master */
+            public final Repository<?> findRepositoryOfPropertyInMaster(Repository.Property<?> property, Master<?, ?> master) {
+                Repository<?> repository = master.getRepository();
+                Class<?> clazz = repository.getClass();
+                while (clazz != null && clazz != clazz.getSuperclass()) {
+                    for (Field field : clazz.getDeclaredFields()) {
+                        try {
+                            Object value = field.get(repository);
+                            if (value == property) {
+                                return repository;
+                            }
+                        } catch (Exception ignored) {}
+                    }
+                    clazz = clazz.getSuperclass();
+                }
+                for (Container<?, ?, ?> container : master.getContainers()) {
+                    Repository<?> r = findRepositoryOfPropertyInContainer(property, container);
+                    if (r != null) return r;
+                }
+                for (ViewManagement.Entity.Master<?, ?>.OneToMany oneToMany : master.oneToManyRelations()) {
+                    if (oneToMany.getView() == null) continue;
+                    for (ViewManagement.Entity.Container<?, ?, ?> container : oneToMany.getView().getContainers()) {
+                        Repository<?> r = findRepositoryOfPropertyInContainer(property, container);
+                        if (r != null) return r;
+                    }
+                }
+                for (ViewManagement.Entity.View<?, ?, ?> view : master.getViews()) {
+                    for (ViewManagement.Entity.Container<?, ?, ?> container : view.getContainers()) {
+                        Repository<?> r = findRepositoryOfPropertyInContainer(property, container);
+                        if (r != null) return r;
+                    }
+                }
+                return null;
+            }
+
+            /** Finds the repository belonging to a property in a container */
+            public final Repository<?> findRepositoryOfPropertyInContainer(Repository.Property<?> property, Container<?, ?, ?> container) {
+                for (ViewManagement.Entity.Element element : container.getElements()) {
+                    if (element instanceof ViewManagement.Entity.Master) {
+                        Repository<?> r = findRepositoryOfPropertyInMaster(property, (Master<?, ?>) element);
+                        if (r != null) return r;
+                    }
+                    else if (element instanceof ViewManagement.Entity.Container) {
+                        Repository<?> r = findRepositoryOfPropertyInContainer(property, (Container<?, ?, ?>) element);
+                        if (r != null) return r;
+                    }
+                }
+                return null;
+            }
+
             /**
              * Creates a combo box for selecting views managed by this master.
              *
@@ -542,7 +600,7 @@ public class ViewManagement {
                 }
                 if (!oneToManyRelations.isEmpty()) {
                     for (OneToMany oneToMany : oneToManyRelations) {
-                        for (Property<? extends Repository<? extends TRepository>> repository : oneToMany.listProperty.properties()) {
+                        for (Property<? extends Repository<? extends TRepository>> repository : oneToMany.getListProperty().properties()) {
                             ComboBoxModel model = new ComboBoxModel(repository.get(), oneToMany);
                             cb.addItem(model);
                             if (model.isSelected()) {
@@ -606,13 +664,10 @@ public class ViewManagement {
                         if (selectedOption.getView() != null) {
                             View<?, ?, ?> activeView = getActiveView();
                             if (activeView == null || selectedOption.getView() != activeView.getView()) {
+                                if (getViewProperty() == null) return;
                                 getViewProperty().replace(selectedOption.getView());
                                 for (OneToMany oneToMany : oneToManyRelations) {
-                                    oneToMany.uuidProperty.replace(null);
-                                }
-                                repository.save();
-                                for (Runnable runnable : onChangeViewRunnables) {
-                                    runnable.run();
+                                    oneToMany.getUuidProperty().replace(null);
                                 }
                                 getRoot().render();
                             }
@@ -624,16 +679,27 @@ public class ViewManagement {
                             String newFileName = selectedOption.getUuid();
                             if (currentUuid == null || !currentUuid.equals(newFileName)) {
                                 selectedOption.getOneToMany().getUuidProperty().replace(newFileName);
-                                repository.save();
-                                for (Runnable runnable : onChangeViewRunnables) {
-                                    runnable.run();
-                                }
                                 getRoot().render();
                             }
                         }
                     }
                 });
                 return cb;
+            }
+
+            /** Runs all the onUpdate runnables in each view */
+            @SuppressWarnings("unchecked")
+            public void updateViews() {
+                for (View view : views) {
+                    for (Runnable runnable : (List<Runnable>)view.onUpdateRunnables) {
+                        runnable.run();
+                    }
+                }
+                for (OneToMany oneToMany : oneToManyRelations) {
+                    for (Runnable runnable : oneToMany.view.onUpdateRunnables) {
+                        runnable.run();
+                    }
+                }
             }
 
             /**
@@ -651,24 +717,40 @@ public class ViewManagement {
                  *
                  * @return a {@code Repository.Property.List} instance containing repositories related to this entity
                  */
+                @SuppressWarnings("unchecked")
                 public Repository.Property.List<? extends Repository<? extends TRepository>> getListProperty() {
-                    return listProperty;
+                    try {
+                        Field field = repository().getClass().getDeclaredField(listProperty);
+                        return (Repository.Property.List<? extends Repository<? extends TRepository>>) field.get(repository());
+                    }
+                    catch (Exception ex) {
+                        System.out.println("Invalid list property field name : " + listProperty + " on repository: " + repository);
+                        return null;
+                    }
                 }
 
                 /** Holds the list property for repositories involved in this one-to-many relationship. */
-                private Repository.Property.List<? extends Repository<? extends TRepository>> listProperty;
+                private String listProperty;
 
                 /**
                  * Retrieves the property representing the unique identifier (UUID) for the relationship.
                  *
                  * @return a {@code Repository.Property<String>} instance containing the UUID for this relationship
                  */
+                @SuppressWarnings("unchecked")
                 public Repository.Property<String> getUuidProperty() {
-                    return uuidProperty;
+                    try {
+                        Field field = repository().getClass().getDeclaredField(uuidProperty);
+                        return (Property<String>) field.get(repository());
+                    }
+                    catch (Exception ex) {
+                        System.out.println("Invalid uuid property field name : " + uuidProperty + " on repository: " + repository);
+                        return null;
+                    }
                 }
 
                 /** Holds the UUID property for this relationship, used to uniquely identify associated entities. */
-                private Repository.Property<String> uuidProperty;
+                private String uuidProperty;
 
                 /**
                  * Sets the view associated with this one-to-many relationship.
@@ -691,19 +773,47 @@ public class ViewManagement {
                 /** Holds the view associated with this one-to-many relationship, typically used for UI or data representation. */
                 private View<? extends Master<TRepository, TEnum>, TRepository, TEnum> view;
 
+                /** GET The repository associated with the properties */
+                public Repository<?> repository() {
+                    return Repository.registered.get(repository);
+                }
+                /** The repository associated with the properties */
+                private String repository = null;
+
                 /**
                  * Constructs a new {@code OneToMany} instance with the specified properties and view.
                  *
-                 * @param listProperty the list property containing repositories associated with this relationship
-                 * @param uuidProperty the UUID property used to uniquely identify each entity in this relationship
+                 * @param repository the path to the repository file
+                 * @param listProperty the field name of the list within the repository
+                 * @param uuidProperty the field name of the uuid within the repository
                  * @param view the view associated with this relationship, typically for UI or navigation purposes
                  */
                 public OneToMany(
-                        Repository.Property.List<? extends Repository<TRepository>> listProperty,
+                        Repository<?> repository,
+                        Repository.Property.List<? extends Repository<? extends TRepository>> listProperty,
                         Repository.Property<String> uuidProperty,
                         View<? extends Master<TRepository, TEnum>, TRepository, TEnum> view) {
-                    this.listProperty = listProperty;
-                    this.uuidProperty = uuidProperty;
+                    this.repository = repository.generatePath();
+                    Class<?> clazz = repository.getClass();
+                    boolean foundList = false;
+                    boolean foundUuid = false;
+                    while (clazz != null && clazz != clazz.getSuperclass()) {
+                        for (Field field : clazz.getDeclaredFields()) {
+                            try {
+                                if (field.get(repository) == listProperty) {
+                                    this.listProperty = field.getName();
+                                    foundList = true;
+                                }
+                                else if (field.get(repository) == uuidProperty) {
+                                    this.uuidProperty = field.getName();
+                                    foundUuid = true;
+                                }
+                            }
+                            catch (Exception ignored) {}
+                            if (foundUuid && foundList) break;
+                        }
+                        clazz = clazz.getSuperclass();
+                    }
                     this.view = view;
                 }
             }
@@ -713,8 +823,6 @@ public class ViewManagement {
              * It encapsulates details about a repository or a view, including their names,
              * file names, and icons. This model can be used to manage selections in 
              * user interfaces, particularly where a one-to-many relationship exists.
-             * 
-             * @param <TEnum> the enumeration type associated with the views in this model
              */
             public class ComboBoxModel {
                 
@@ -840,12 +948,12 @@ public class ViewManagement {
                 public ComboBoxModel(Repository<?> repository, OneToMany oneToMany) {
                     this.name = repository.toString();
                     this.iconPath = repository.getIconPath();
-                    this.uuid = repository.getUuid();
+                    this.uuid = repository.uuid();
                     this.view = null;
                     this.oneToMany = oneToMany;
                     this.repository = repository;
                     if (iconPath != null) {
-                        this.icon = Resources.loadImageIcon(iconPath.getPath(), 18, 18);
+                        this.icon = Resources.loadImageIcon(iconPath.getPath(), Theme.COMBO_BOX_ICON_SIZE, Theme.COMBO_BOX_ICON_SIZE);
                     }
                     else {
                         this.icon = null;
@@ -863,7 +971,7 @@ public class ViewManagement {
                     this.uuid = null;
                     this.view = view.getView();
                     if (iconPath != null) {
-                        this.icon = Resources.loadImageIcon(iconPath.getPath(), 18, 18);
+                        this.icon = Resources.loadImageIcon(iconPath.getPath(), Theme.COMBO_BOX_ICON_SIZE, Theme.COMBO_BOX_ICON_SIZE);
                     }
                     else {
                         this.icon = null;
@@ -1189,6 +1297,9 @@ public class ViewManagement {
                 return view;
             }
 
+            /** The runnables to run when the master updates */
+            private final List<Runnable> onUpdateRunnables = new ArrayList<>();
+
             /**
              * Constructs a {@code View} instance with the specified master entity 
              * and view type.
@@ -1200,6 +1311,11 @@ public class ViewManagement {
                 super(master.getRoot());
                 this.master = master;
                 this.view = view;
+            }
+
+            /** Adds a runnable when the master is updated */
+            public final void onUpdate(Runnable runnable) {
+                onUpdateRunnables.add(runnable);
             }
 
             /**

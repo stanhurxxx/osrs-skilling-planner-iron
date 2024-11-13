@@ -48,17 +48,4 @@ public class SlayerPlanningRepository extends Repository<SlayerRepository> {
     public SlayerPlanningRepository(@JacksonInject SlayerRepository repository, String fileName) {
         super(repository, fileName);
     }
-
-    @Override
-    public SlayerPlanningRepository initialize() {
-        try {
-            SlayerPlanningRepository repository = (SlayerPlanningRepository)load();
-            if (repository == this) {
-                throw new Exception();
-            }
-            return repository;
-        }
-        catch (Exception ignored) {}
-        return this;
-    }
 }

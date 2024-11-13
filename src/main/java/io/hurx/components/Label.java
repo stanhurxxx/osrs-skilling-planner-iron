@@ -2,9 +2,11 @@ package io.hurx.components;
 
 import io.hurx.components.menuButton.MenuButton;
 import io.hurx.components.table.Table;
+import io.hurx.components.textField.TextField;
 import io.hurx.utils.Theme;
 
 import javax.swing.*;
+import javax.swing.border.Border;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellEditor;
 import java.awt.*;
@@ -84,6 +86,14 @@ public class Label extends Table {
         return (Label)super.height(rowHeight);
     }
 
+    /** SET a fixed width */
+    public Label fixedWidth(FixedWidth fixedWidth) {
+        this.fixedWidths.add(fixedWidth);
+        return this;
+    }
+    /** All the fixed widths */
+    private List<FixedWidth> fixedWidths = new ArrayList<>();
+
     public Label() {
         super();
         this.setRowHeight(Theme.TABLE_ROW_HEIGHT);
@@ -125,6 +135,18 @@ public class Label extends Table {
     }
 
     public static class Plain extends JLabel {
+        /** GET Custom border */
+        public Border border() {
+            return this.border;
+        }
+        /** SET Custom border */
+        public Plain border(Border border) {
+            this.border = border;
+            return this;
+        }
+        /** Custom border */
+        private Border border;
+
         public boolean hoverable() {
             return hoverable;
         }
@@ -156,6 +178,18 @@ public class Label extends Table {
             addMouseListener(adapter);
             return this;
         }
+
+        /** GET the custom font */
+        public Font font() {
+            return font;
+        }
+        /** SET a custom font */
+        public Plain font(Font font) {
+            this.font = font;
+            return this;
+        }
+        /** A custom font */
+        private Font font;
 
         public Plain(String text) {
             super(text);
@@ -193,6 +227,12 @@ public class Label extends Table {
                 else {
                     plain.setBackground(Theme.TABLE_BG_COLOR);
                 }
+                if (plain.border() != null) {
+                    plain.setBorder(plain.border());
+                }
+                if (plain.font() != null) {
+                    plain.setFont(plain.font());
+                }
                 return plain;
             }
         }
@@ -219,6 +259,20 @@ public class Label extends Table {
                 // Set the button state based on the table cell value if needed
                 return plain;
             }
+        }
+    }
+
+    /** A fixed with column */
+    public static class FixedWidth {
+        /** Column index */
+        private int column;
+
+        /** The width */
+        private int width;
+
+        public FixedWidth(int column, int width) {
+            this.column = column;
+            this.width = width;
         }
     }
 
@@ -254,11 +308,22 @@ public class Label extends Table {
         if (bottomPadding) rows.add(emptyRow.toArray());
 
         // Calculate cell widths
-        int totalWidth = 229;
+        int totalWidth = Theme.WIDTH;
         int elements = 0;
         int menuButtons = 0;
         for (int i = 0; i < row.length; i ++) {
             Object cell = row[i];
+            FixedWidth fixedWidth = null;
+            for (FixedWidth f : fixedWidths) {
+                if (f.column == i) {
+                    fixedWidth = f;
+                    break;
+                }
+            }
+            if (fixedWidth != null) {
+                totalWidth -= fixedWidth.width;
+                continue;
+            }
             if (cell instanceof MenuButton) {
                 menuButtons ++;
                 totalWidth -= height();
@@ -279,10 +344,25 @@ public class Label extends Table {
             }
             // Set divided width
             if (elements > 0 && !(cell instanceof MenuButton)) {
-                getColumnModel().getColumn(i).setPreferredWidth(Math.round((float)totalWidth / elements));
-                getColumnModel().getColumn(i).setMinWidth(Math.round((float)totalWidth / elements));
-                getColumnModel().getColumn(i).setMaxWidth(Math.round((float)totalWidth / elements));
-                getColumnModel().getColumn(i).setWidth(Math.round((float)totalWidth / elements));
+                FixedWidth fixedWidth = null;
+                for (FixedWidth f : fixedWidths) {
+                    if (f.column == i) {
+                        fixedWidth = f;
+                        break;
+                    }
+                }
+                if (fixedWidth == null) {
+                    getColumnModel().getColumn(i).setPreferredWidth(Math.round((float)totalWidth / elements));
+                    getColumnModel().getColumn(i).setMinWidth(Math.round((float)totalWidth / elements));
+                    getColumnModel().getColumn(i).setMaxWidth(Math.round((float)totalWidth / elements));
+                    getColumnModel().getColumn(i).setWidth(Math.round((float)totalWidth / elements));
+                }
+                else {
+                    getColumnModel().getColumn(i).setPreferredWidth(fixedWidth.width);
+                    getColumnModel().getColumn(i).setMinWidth(fixedWidth.width);
+                    getColumnModel().getColumn(i).setMaxWidth(fixedWidth.width);
+                    getColumnModel().getColumn(i).setWidth(fixedWidth.width);
+                }
             }
             // Except for menu buttons
             if (cell instanceof MenuButton) {

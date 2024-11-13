@@ -1,5 +1,6 @@
 package io.hurx.plugin.slayer;
 
+import io.hurx.models.repository.Repository;
 import io.hurx.models.views.ViewManagement;
 import io.hurx.plugin.PluginPanel;
 import io.hurx.plugin.slayer.views.overview.SlayerOverviewView;
@@ -16,20 +17,20 @@ public class SlayerMaster extends ViewManagement.Entity.Master<SlayerRepository,
             root,
             repository,
             SlayerViews.values(),
-            repository.view
+            () -> {
+                SlayerRepository slayerRepository = (SlayerRepository) Repository.registered.get(repository.generatePath());
+                return slayerRepository.view;
+            }
         );
         // Adds a one to many relation to the slayer lists,
         // so they appear in the combo box.
         oneToMany(new OneToMany(
+            repository,
             repository.lists,
             repository.listUuid,
             new SlayerListView(this)
         ));
         addView(new SlayerOverviewView(this));
         addView(new SlayerPlannerView(this));
-        // Initialize the plugin master with the new views
-        for (Runnable runnable : getRoot().getPlugin().getMaster().getOnChangeViewRunnables()) {
-            runnable.run();
-        }
     }
 }

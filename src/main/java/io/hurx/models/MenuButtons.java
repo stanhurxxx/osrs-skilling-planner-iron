@@ -16,6 +16,7 @@ public enum MenuButtons {
     Duplicate("Duplicate", IconPaths.MenuDuplicate),
     Delete("Delete", IconPaths.MenuDelete),
     Save("Save", IconPaths.MenuSave),
+    Sort("Sort table by", IconPaths.MenuSort)
     ;
 
     /**

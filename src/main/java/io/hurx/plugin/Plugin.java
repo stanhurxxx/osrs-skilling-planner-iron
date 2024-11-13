@@ -5,11 +5,15 @@ import io.hurx.models.items.Items;
 
 import javax.inject.Inject;
 
+import io.hurx.models.repository.Repository;
 import io.hurx.models.views.ViewManagement;
+import io.hurx.repository.AccountRepository;
 import io.hurx.repository.PluginRepository;
+import io.hurx.repository.ProfileRepository;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
+import net.runelite.api.ItemComposition;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
@@ -22,12 +26,14 @@ import net.runelite.client.util.AsyncBufferedImage;
 
 import java.awt.image.BufferedImage;
 
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
 
 import javax.imageio.ImageIO;
 import java.io.File;
-import javax.swing.ImageIcon;
+import javax.swing.*;
 
 import io.hurx.utils.Injects;
 
@@ -101,6 +107,7 @@ public class Plugin extends net.runelite.client.plugins.Plugin {
      */
     @Override
     protected void startUp() throws Exception {
+        // Load stuff on the client thread
         clientThread.invoke(() -> {
             updateItems();
             List<Items> itemsLoading = new ArrayList<>();
@@ -115,17 +122,28 @@ public class Plugin extends net.runelite.client.plugins.Plugin {
 
                     itemsLoading.remove(item);
                     if (itemsLoading.isEmpty()) {
+                        // Get the account hash
+                        accountHash = Long.toString(client.getAccountHash());
+
+                        // Draw the UI
                         try {
-                            initialize();
+                            // Set the panel
+                            panel = new PluginPanel(this);
+
+                            // Initialize the UI
+                            this.initialize();
 
                             // Post initialization, add panel to toolbar
                             NavigationButton button = NavigationButton.builder()
-                                    .tooltip("Skilling planner")
-                                    .icon(ImageIO.read(getClass().getResourceAsStream("/icons/panel-icon.png")))
-                                    .panel(panel)
-                                    .build();
+                                .tooltip("Skilling planner")
+                                .icon(ImageIO.read(getClass().getResourceAsStream("/icons/panel-icon.png")))
+                                .panel(panel)
+                                .build();
+
                             clientToolbar.addNavigation(button);
-                            clientToolbar.openPanel(button);
+                            SwingUtilities.invokeLater(() -> {
+                                clientToolbar.openPanel(button);
+                            });
                         } catch (Exception ex) {
                             System.out.println("Loading iron skiller plugin failed.");
                             ex.printStackTrace();
@@ -140,30 +158,15 @@ public class Plugin extends net.runelite.client.plugins.Plugin {
      * Initializes the panel and renders it.
      */
     public void initialize() {
-        try {
-            Injects.reset();
-            Injects.setInjectable(Plugin.class, this);
-
-            accountHash = Long.toString(client.getAccountHash());
-
-            this.panel = new PluginPanel(this);
-            this.master = new PluginMaster(this.panel, new PluginRepository(this, accountHash).initialize());
-
-            // Ready
-            this.panel.setReady(true);
-
-            // Send onReady event to master
-            for (Runnable runnable : master.onReadyRunnables()) {
-                runnable.run();
-            }
-
-            // Render
-            this.panel.render();
+        Injects.reset();
+        Injects.setInjectable(Plugin.class, this);
+        // Initialize the master
+        master = new PluginMaster(panel, new PluginRepository(this, accountHash).initialize());
+        // Send onReady event to master
+        for (Runnable runnable : master.onReadyRunnables()) {
+            runnable.run();
         }
-        catch (Exception e) {
-            System.out.println("Couldn't initialize PluginPanel: " + e.getMessage());
-            e.printStackTrace();
-        }
+        panel.render();
     }
 
     /**
@@ -189,10 +192,10 @@ public class Plugin extends net.runelite.client.plugins.Plugin {
             if (this.panel == null) {
                 return;
             }
-            if (!Long.toString(client.getAccountHash()).equals(accountHash)) {
-                accountHash = Long.toString(client.getAccountHash());
-                this.master = new PluginMaster(this.panel, new PluginRepository(this, accountHash));
-                this.panel.render();
+            String accountHash = Long.toString(client.getAccountHash());
+            if (!accountHash.equals(accountHash)) {
+                accountHash = accountHash;
+                initialize();
             }
             if (gameStateChanged.getGameState() == GameState.LOGGED_IN) {
                 updateItems();
@@ -211,13 +214,14 @@ public class Plugin extends net.runelite.client.plugins.Plugin {
         for (Items item : Items.values()) {
             Item definition = item.getItem();
 
+            ItemComposition composition = itemManager.getItemComposition(definition.getId());
+
             // Update item name
-            definition.setName(itemManager.getItemComposition(definition.getId()).getName());
+            definition.setName(composition.getName());
 
             // Update noted id
-            int notedId = itemManager.getItemComposition(definition.getId()).getLinkedNoteId();
-            definition.setNotedId(
-                    notedId == definition.getId() || notedId < 0 ? null : notedId);
+            int notedId = composition.getLinkedNoteId();
+            definition.setNotedId(notedId == definition.getId() || notedId < 0 ? null : notedId);
 
             // Update item price
             if (definition.getPriceItemId() != null) {

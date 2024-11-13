@@ -182,6 +182,7 @@ public enum IconPaths {
     MenuDelete("icons/menu/delete.png"),
     MenuDuplicate("icons/menu/duplicate.png"),
     MenuSave("icons/menu/save.png"),
+    MenuSort("icons/menu/sort.png"),
 
     PrayerAugury("icons/prayers/augury.png"),
     PrayerEagleEye("icons/prayers/eagle-eye.png"),

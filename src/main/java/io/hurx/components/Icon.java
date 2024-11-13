@@ -49,6 +49,11 @@ public class Icon extends JPanel {
         return icon;
     }
 
+    /** SET the amount displayed */
+    public void setAmount(Integer amount) {
+        this.amount = amount;
+    }
+
     /**
      * Retrieves the amount displayed alongside the icon.
      *

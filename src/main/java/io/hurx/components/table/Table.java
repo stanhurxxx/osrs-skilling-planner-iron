@@ -6,6 +6,7 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellEditor;
 import javax.swing.table.TableCellRenderer;
 
+import io.hurx.components.Icon;
 import io.hurx.components.Label;
 import io.hurx.components.button.Button;
 import io.hurx.components.button.ButtonCellEditor;
@@ -31,8 +32,11 @@ import io.hurx.utils.Theme;
 import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.sql.Array;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * A custom JTable implementation that provides enhanced customization options.
@@ -49,10 +53,20 @@ public class Table extends JTable {
     // Holds data rows for the table
     public final Repository.Property.List<Object[]> rows = new Repository.Property.List<>();
 
-    // List of custom cell renderers for the table
+    /** Adds a cell renderer */
+    public final Table cellRenderer(CellRenderer cellRenderer) {
+        cellRenderers.add(cellRenderer);
+        return this;
+    }
+    /** ist of custom cell renderers for the table */
     private final List<CellRenderer> cellRenderers = new ArrayList<>();
 
-    // List of custom cell editors for the table
+    /** Adds a cell editor */
+    public final Table cellEditor(CellEditor cellEditor) {
+        cellEditors.add(cellEditor);
+        return this;
+    }
+    /** List of custom cell editors for the table */
     private final List<CellEditor> cellEditors = new ArrayList<>();
 
     /** Whether the component is in prerender mode */
@@ -64,8 +78,88 @@ public class Table extends JTable {
     /** The hovered col index */
     private int hoveredColumnIndex = -1;
 
+    /** Add a mouse adapters */
+    public Table mouseListener(MouseListener mouseListener) {
+        this.mouseListeners.add(mouseListener);
+        addMouseListener(mouseListener);
+        return this;
+    }
     /** All the registered mouse adapters */
     private List<MouseListener> mouseListeners = new ArrayList<>();
+
+    /** SET Whether the table can be validated */
+    public Table validatable(boolean validatable) {
+        this.validatable = validatable;
+        return this;
+    }
+    /** GET Whether the table can be validated */
+    public boolean validatable() {
+        return validatable;
+    }
+    /** Whether the table can be validated */
+    private boolean validatable = false;
+
+    /** SET the height per row */
+    public Table height(int rowHeight) {
+        setRowHeight(rowHeight);
+        this.height = rowHeight;
+        return this;
+    }
+
+    /** SET the height for a specific row*/
+    public Table height(int index, int rowHeight) {
+        setRowHeight(index, rowHeight);
+        this.heights.put(index, rowHeight);
+        return this;
+    }
+
+    /** Gets the row height */
+    public int height() {
+        return height;
+    }
+
+    /** The height per row */
+    private int height = Theme.TABLE_ROW_HEIGHT;
+
+    /** The map of custom heights per row */
+    private Map<Integer, Integer> heights = new HashMap<>();
+
+    /**
+     * Calculates the maximum number of columns across all rows.
+     *
+     * @return the maximum number of columns
+     */
+    public int columnCount() {
+        int maxColumnCount = 0;
+        for (Object[] row : rows.values()) {
+            maxColumnCount = Math.max(row.length, maxColumnCount);
+        }
+        return maxColumnCount;
+    }
+
+    /** ADD to the grouped cells */
+    public Table group(Group group) {
+        this.groups.add(group);
+        return this;
+    }
+    /** Grouped cells */
+    private List<Group> groups = new ArrayList<>();
+
+    /** SET The default horizontal alignment (SwingConstants.LEFT/CENTER/ETC) */
+    public Table horizontalAlignment(int horizontalAlignment) {
+        this.horizontalAlignment = horizontalAlignment;
+        return this;
+    }
+    /** The default horizontal alignment (SwingConstants.LEFT/CENTER/ETC) */
+    private int horizontalAlignment = SwingConstants.LEFT;
+
+    /** SET The default vertical alignment (SwingConstants.LEFT/CENTER/ETC) */
+    public Table verticalAlignment(int verticalAlignment) {
+        this.verticalAlignment = verticalAlignment;
+        return this;
+    }
+    /** The default vertical alignment (SwingConstants.LEFT/CENTER/ETC) */
+    private int verticalAlignment = SwingConstants.CENTER;
 
     /**
      * Constructs a new table instance with a default table model and configures
@@ -95,6 +189,32 @@ public class Table extends JTable {
                 clearSelection(); // Clear selection on click
                 revalidate();
                 repaint();
+            }
+
+            @Override
+            public void mouseReleased(java.awt.event.MouseEvent e) {
+                if (e.getButton() != MouseEvent.BUTTON1 && e.getButton() != MouseEvent.BUTTON3) {
+                    return;
+                }
+                Group group = null;
+                for (Group g : groups) {
+                    for (Point coordinate : g.coordinates) {
+                        if (coordinate.x == hoveredColumnIndex && coordinate.y == hoveredRowIndex) {
+                            group = g;
+                            break;
+                        }
+                    }
+                }
+                if (e.getButton() == MouseEvent.BUTTON1) {
+                    if (group != null && group.onClickRunnable != null) {
+                        group.onClickRunnable.run();
+                    }
+                }
+                else {
+                    if (group != null) {
+                        group.onRightClick(e);
+                    }
+                }
             }
 
             @Override
@@ -166,67 +286,6 @@ public class Table extends JTable {
         });
     }
 
-    public Table mouseListener(MouseListener mouseListener) {
-        this.mouseListeners.add(mouseListener);
-        addMouseListener(mouseListener);
-        return this;
-    }
-
-    /**
-     * Adds a cell renderer to the table with the specified start and end column indices.
-     *
-     * @param cellRenderer the cell renderer to be added
-     * @return this table instance, for chaining
-     */
-    public final Table cellRenderer(CellRenderer cellRenderer) {
-        cellRenderers.add(cellRenderer);
-        return this;
-    }
-
-    /**
-     * Adds a cell editor to the table with the specified start and end column indices.
-     *
-     * @param cellEditor the cell editor to be added
-     * @return this table instance, for chaining
-     */
-    public final Table cellEditor(CellEditor cellEditor) {
-        cellEditors.add(cellEditor);
-        return this;
-    }
-
-    /**
-     * Sets the height for each row in the table.
-     *
-     * @param rowHeight the height in pixels for each row
-     * @return this table instance, for chaining
-     */
-    public Table height(int rowHeight) {
-        setRowHeight(rowHeight);
-        this.height = rowHeight;
-        return this;
-    }
-
-    /** Gets the row height */
-    public int height() {
-        return height;
-    }
-
-    /** The height per row */
-    private int height = Theme.TABLE_ROW_HEIGHT;
-
-    /**
-     * Calculates the maximum number of columns across all rows.
-     *
-     * @return the maximum number of columns
-     */
-    public int columnCount() {
-        int maxColumnCount = 0;
-        for (Object[] row : rows.values()) {
-            maxColumnCount = Math.max(row.length, maxColumnCount);
-        }
-        return maxColumnCount;
-    }
-
     /**
      * Prepares the table for rendering.
      */
@@ -267,8 +326,13 @@ public class Table extends JTable {
         DefaultTableModel model = (DefaultTableModel) this.getModel();
 
         // Populate rows from the repository property list
-        for (Object[] row : rows.values()) {
+        for (int i = 0; i < rows.size(); i ++) {
+            Object[] row = rows.get(i);
+            if (row == null) continue;
+            // Add the row
             model.addRow(row);
+            // Set the row height for each row
+            setRowHeight(i, heights.getOrDefault(i, height));
         }
 
         for (int i = 0; i < model.getRowCount(); i ++) {
@@ -363,12 +427,17 @@ public class Table extends JTable {
                     }, i, j));
                 }
                 else if (cell instanceof Label.Plain) {
-                    Label.Plain data = (Label.Plain) cell;
-                    data.hovered(i == hoveredRowIndex && j == hoveredColumnIndex);
-                    data.revalidate();
-                    data.repaint();
-                    cellRenderer(new CellRenderer(new Label.Plain.CellRenderer(data), i, j));
-                    cellEditor(new CellEditor(new Label.Plain.CellEditor(data), i, j));
+                    if (validatable) {
+                        cellRenderer(new CellRenderer(new DefaultCellRenderer(), i, j));
+                    }
+                    else {
+                        Label.Plain data = (Label.Plain) cell;
+                        data.hovered(i == hoveredRowIndex && j == hoveredColumnIndex);
+                        data.revalidate();
+                        data.repaint();
+                        cellRenderer(new CellRenderer(new Label.Plain.CellRenderer(data), i, j));
+                        cellEditor(new CellEditor(new Label.Plain.CellEditor(data), i, j));
+                    }
                 }
                 else {
                     cellRenderer(new CellRenderer(new DefaultCellRenderer(), i, j));
@@ -452,6 +521,83 @@ public class Table extends JTable {
         return false;
     }
 
+    /** A group of cells */
+    public static class Group {
+        /** Checks whether the group is validated */
+        public boolean isValidated() {
+            return true;
+        }
+
+        /** Checks whether a group is validatable */
+        public boolean isValidatable() {
+            return this.colorValidated != null && this.colorInvalidated != null;
+        }
+
+        /** On right click handler */
+        public void onRightClick(MouseEvent e) {
+            return;
+        }
+
+        /** Whether or not the group is active */
+        public boolean isActive() {
+            return false;
+        }
+
+        /** Whether or not the group is hoverable */
+        public boolean isHoverable() {
+            return false;
+        }
+
+        /** ADD to the list of coordinates of this group */
+        public Group coordinate(Point point) {
+            coordinates.add(point);
+            return this;
+        }
+        /** The list of coordinates of this group */
+        public List<Point> coordinates = new ArrayList<>();
+
+        /** SET The color when validated */
+        public Group colorValidated(Color color) {
+            colorValidated = color;
+            return this;
+        }
+        /** The color when validated */
+        private Color colorValidated;
+
+        /** SET The color when invalidated */
+        public Group colorInvalidated(Color color) {
+            colorInvalidated = color;
+            return this;
+        }
+        /** The color when invalidated */
+        private Color colorInvalidated;
+
+        public Group colorInactive(Color color) {
+            colorInactive = color;
+            return this;
+        }
+        /** The color when not hovering and inactive */
+        private Color colorInactive;
+
+        /** SET The color on hover */
+        public Group colorHover(Color color) {
+            colorHover = color;
+            return this;
+        }
+        /** The color on hover */
+        private Color colorHover;
+
+        /** SET The onclick runnable */
+        public Group onClick(Runnable onClickRunnable) {
+            this.onClickRunnable = onClickRunnable;
+            return this;
+        }
+        /** The onclick runnable */
+        private Runnable onClickRunnable;
+
+        public Group() {}
+    }
+
     /**
      * Represents a custom cell renderer with specified column range.
      */
@@ -460,7 +606,7 @@ public class Table extends JTable {
         private final int row;
         private final int col;
 
-        private CellRenderer(DefaultTableCellRenderer cellRenderer, int row, int col) {
+        public CellRenderer(DefaultTableCellRenderer cellRenderer, int row, int col) {
             this.cellRenderer = cellRenderer;
             this.row = row;
             this.col = col;
@@ -487,11 +633,100 @@ public class Table extends JTable {
      */
     public static class DefaultCellRenderer extends DefaultTableCellRenderer {
         @Override
-        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-            if (value instanceof JComponent) {
-                return (JComponent) value;
+        public Component getTableCellRendererComponent(JTable jTable, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            Table table = (Table) jTable;
+            Group group = null;
+            boolean isHovered = false;
+            for (Group g : table.groups) {
+                for (Point coordinate : g.coordinates) {
+                    if (coordinate.x == column && coordinate.y == row) {
+                        group = g;
+                    }
+                }
+            }
+            if (group != null) {
+                for (Point coordinate : group.coordinates) {
+                    if (coordinate.x == table.hoveredColumnIndex && coordinate.y == table.hoveredRowIndex) {
+                        isHovered = true;
+                    }
+                }
+            }
+            if (value instanceof ImageIcon) {
+                JLabel label = new JLabel();
+                processLabel(label, group, table, isHovered);
+                label.setIcon((ImageIcon)value);
+                return label;
+            }
+            else if (value instanceof JLabel) {
+                JLabel label = (JLabel) value;
+                processLabel(label, group, table, isHovered);
+                return label;
+            }
+            else if (value instanceof Icon) {
+                Icon icon = (Icon) value;
+                icon.setOpaque(true);
+                if (group != null) {
+                    if (group.isHoverable() && isHovered && group.colorHover != null) {
+                        icon.setBackground(group.colorHover);
+                    }
+                    else if (table.validatable && group.isValidated() && group.isValidatable() && group.colorValidated != null) {
+                        icon.setBackground(group.colorValidated);
+                    }
+                    else if (table.validatable && !group.isValidated() && group.isValidatable() && group.colorInvalidated != null) {
+                        icon.setBackground(group.colorInvalidated);
+                    }
+                    else if (group.colorInactive != null) {
+                        icon.setBackground(group.colorInactive);
+                    }
+                    else {
+                        icon.setBackground(Theme.TABLE_BG_COLOR);
+                    }
+                }
+                else {
+                    icon.setBackground(Theme.BG_COLOR);
+                }
+                return icon;
+            }
+            else if (value instanceof Component) {
+                return (Component) value;
             }
             return super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+        }
+
+        /** Processes the background color and other properties for a label */
+        private void processLabel(JLabel label, Group group, Table table, boolean isHovered) {
+            label.setOpaque(true);
+            label.setHorizontalAlignment(table.horizontalAlignment);
+            label.setVerticalAlignment(table.verticalAlignment);
+            if (group != null) {
+                if (group.isHoverable() && isHovered && group.colorHover != null) {
+                    label.setBackground(group.colorHover);
+                }
+                else if (table.validatable && group.isValidated() && group.isValidatable() && group.colorValidated != null) {
+                    label.setBackground(group.colorValidated);
+                }
+                else if (table.validatable && !group.isValidated() && group.isValidatable() && group.colorInvalidated != null) {
+                    label.setBackground(group.colorInvalidated);
+                }
+                else if (group.colorInactive != null) {
+                    label.setBackground(group.colorInactive);
+                }
+                else {
+                    label.setBackground(Theme.TABLE_BG_COLOR);
+                }
+            }
+            else {
+                label.setBackground(Theme.BG_COLOR);
+            }
+            if (label instanceof Label.Plain) {
+                Label.Plain plain = (Label.Plain) label;
+                if (plain.border() != null) {
+                    plain.setBorder(plain.border());
+                }
+                if (plain.font() != null) {
+                    plain.setFont(plain.font());
+                }
+            }
         }
     }
 }

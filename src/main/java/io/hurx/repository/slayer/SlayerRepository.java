@@ -5,12 +5,13 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import io.hurx.annotations.ManyToOne;
 import io.hurx.models.repository.Repository;
+import io.hurx.models.repository.exceptions.PlayerNotLoggedInException;
+import io.hurx.models.repository.exceptions.RepositoryFileCorruptedException;
 import io.hurx.models.slayer.masters.SlayerMasters;
-import io.hurx.repository.AccountRepository;
-import io.hurx.repository.PluginRepository;
 import io.hurx.repository.ProfileRepository;
 import io.hurx.plugin.slayer.SlayerViews;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -44,7 +45,7 @@ public class SlayerRepository extends Repository<ProfileRepository> {
         if (listUuid == null) return null;
         for (SlayerListRepository list : lists.values()) {
             if (list == null) continue;
-            if (list.getUuid().equals(listUuid)) {
+            if (list.uuid().equals(listUuid)) {
                 return list;
             }
         }
@@ -91,95 +92,41 @@ public class SlayerRepository extends Repository<ProfileRepository> {
         super(repository, "slayer");
     }
 
+    /** Fills the data if not initialized */
     @Override
-    public SlayerRepository initialize() {
-        try {
-            SlayerRepository loaded = (SlayerRepository)load();
-            if (loaded == this) {
-                throw new Exception();
-            }
-            return loaded;
-        }
-        catch (Exception ex) {
-            System.out.println("Iniitalize slayer..");
+    public void fillData() {
+        plannings.clear();
+        lists.clear();
+        listUuid.replace(null);
+        planningUuid.replace(null);
 
-            if (!isInitialized) {
-                plannings.clear();
-                lists.clear();
-                listUuid.replace(null);
-                planningUuid.replace(null);
+        // Initialize pre-99 Slayer list
+        SlayerListRepository pre99 = new SlayerListRepository(this).initialize();
+        pre99.name.replace("Pre 99 list");
+        pre99.master.replace(SlayerMasters.Nieve);
 
-                // Initialize pre-99 Slayer list
-                SlayerListRepository pre99 = new SlayerListRepository(this);
-                pre99.name.replace("Pre 99 list");
-                pre99.master.replace(SlayerMasters.Nieve);
+        // Initialize post-99 Slayer list
+        SlayerListRepository post99 = new SlayerListRepository(this).initialize();
+        post99.name.replace("Post 99 list");
 
-                // Initialize post-99 Slayer list
-                SlayerListRepository post99 = new SlayerListRepository(this);
-                post99.name.replace("Post 99 list");
+        // Add lists to the repository
+        this.lists.add(pre99);
+        this.lists.add(post99);
 
-                // Add lists to the repository
-                this.lists.add(pre99);
-                this.lists.add(post99);
+        // Pre-99 planning
+        SlayerPlanningRepository planningPre99 = new SlayerPlanningRepository(this).initialize();
+        planningPre99.startXP.replace(0);
+        planningPre99.endXP.replace(13_034_431);
+        planningPre99.listUuid.replace(pre99.uuid());
+        plannings.add(planningPre99);
 
-                // Pre-99 planning
-                SlayerPlanningRepository planningPre99 = new SlayerPlanningRepository(this);
-                planningPre99.startXP.replace(0);
-                planningPre99.endXP.replace(13_034_431);
-                planningPre99.listUuid.replace(pre99.getUuid());
-                plannings.add(planningPre99);
-
-                // Post-99 planning
-                SlayerPlanningRepository planningPost99 = new SlayerPlanningRepository(this);
-                planningPost99.startXP.replace(13_034_431);
-                planningPost99.endXP.replace(200_000_000);
-                planningPost99.listUuid.replace(post99.getUuid());
-                plannings.add(planningPost99);
-                plannings.properties().sort((m1, m2) -> Integer.compare(m1.get().startXP.get(), m2.get().endXP.get()));
-
-                isInitialized(true);
-
-                try {
-                    pre99.save();
-                    post99.save();
-                    planningPre99.save();
-                    planningPost99.save();
-                    save();
-                }
-                catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-
-        return this;
-    }
-
-    @Override
-    public SlayerRepository copy() {
-        Map<String, SlayerListRepository> slayerListsByUuid = new HashMap<>();
-        Map<String, SlayerPlanningRepository> slayerPlanningsByUuid = new HashMap<>();
-        for (SlayerListRepository list : lists.values()) {
-            slayerListsByUuid.put(list.getUuid(), list);
-        }
-        for (SlayerPlanningRepository planning : plannings.values()) {
-            slayerPlanningsByUuid.put(planning.getUuid(), planning);
-        }
-        super.copy();
-        if (listUuid.get() != null) {
-            listUuid.replace(slayerPlanningsByUuid.get(listUuid.get()).getUuid());
-        }
-        if (planningUuid.get() != null) {
-            planningUuid.replace(slayerPlanningsByUuid.get(planningUuid.get()).getUuid());
-        }
-        for (SlayerPlanningRepository planning : plannings.values()) {
-            if (planning.listUuid.get() == null) continue;
-            SlayerListRepository repository = slayerListsByUuid.get(planning.listUuid.get());
-            if (repository == null) continue;
-            planning.listUuid.replace(repository.getUuid());
-        }
-        save();
-        return this;
+        // Post-99 planning
+        SlayerPlanningRepository planningPost99 = new SlayerPlanningRepository(this).initialize();
+        planningPost99.startXP.replace(13_034_431);
+        planningPost99.endXP.replace(200_000_000);
+        planningPost99.listUuid.replace(post99.uuid());
+        plannings.add(planningPost99);
+        plannings.properties().sort((m1, m2) -> Integer.compare(m1.get().startXP.get(), m2.get().endXP.get()));
     }
 
     @Override
@@ -202,7 +149,7 @@ public class SlayerRepository extends Repository<ProfileRepository> {
     // TODO: make property
     public SlayerListRepository findListByFileName(String fileName) {
         for (Repository.Property<SlayerListRepository> list : lists.properties()) {
-            if (list.get().getUuid().equals(fileName)) {
+            if (list.get().uuid().equals(fileName)) {
                 return list.get();
             }
         }
@@ -218,7 +165,7 @@ public class SlayerRepository extends Repository<ProfileRepository> {
     // TODO: make property
     public SlayerPlanningRepository findPlanningByFileName(String fileName) {
         for (Repository.Property<SlayerPlanningRepository> planning : plannings.properties()) {
-            if (planning.get().getUuid().equals(fileName)) {
+            if (planning.get().uuid().equals(fileName)) {
                 return planning.get();
             }
         }

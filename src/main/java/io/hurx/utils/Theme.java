@@ -3,7 +3,6 @@ package io.hurx.utils;
 import net.runelite.client.ui.FontManager;
 
 import java.awt.*;
-import java.io.IOException;
 
 /**
  * A utility class that defines the color themes and UI constants for the application.
@@ -11,7 +10,12 @@ import java.io.IOException;
  * as well as padding and size constants for layout management.
  */
 public class Theme {
-    
+    /** The available width */
+    public static int WIDTH = 229;
+
+    /** The default combo box icon size */
+    public static int COMBO_BOX_ICON_SIZE = 18;
+
     /** Background color for the main application interface. */
     public static Color BG_COLOR = new Color(40, 40, 40);
     

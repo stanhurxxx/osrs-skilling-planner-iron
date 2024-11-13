@@ -3,11 +3,10 @@ package io.hurx.repository;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.hurx.annotations.ManyToOne;
-import io.hurx.annotations.SerializationIgnore;
+import io.hurx.annotations.OneToOne;
 import io.hurx.models.repository.Repository;
 import io.hurx.plugin.Plugin;
 import io.hurx.plugin.PluginViews;
-import io.hurx.repository.slayer.SlayerRepository;
 import io.hurx.utils.Injects;
 
 public class PluginRepository extends Repository<PluginRepository> {
@@ -22,45 +21,25 @@ public class PluginRepository extends Repository<PluginRepository> {
     @ManyToOne(type = ProfileRepository.class)
     public Repository.Property.List<ProfileRepository> profiles = new Repository.Property.List<ProfileRepository>();
 
+    @JsonIgnore
+    /** Gets the account */
+    public AccountRepository getAccount() {
+        return (AccountRepository) Repository.registered.get(account.generatePath());
+    }
+
     /**
      * The selected account
      */
-    @SerializationIgnore
+    @OneToOne
     public AccountRepository account;
-
-    /**
-     * The view (always Profile)
-     */
-    public Repository.Property<PluginViews> view = new Repository.Property<PluginViews>(PluginViews.Overview);
 
     public PluginRepository(@JacksonInject Plugin plugin, String accountHash) {
         super(plugin, "plugin");
 
-        account = new AccountRepository(this, accountHash);
+        AccountRepository accountRepository = new AccountRepository(this, accountHash);
+        account = (AccountRepository) Repository.registered.get(accountRepository.generatePath());
 
         // Register the repository in the jackson object mapper injectables
         Injects.setInjectable(PluginRepository.class, this);
-    }
-
-    @Override
-    public PluginRepository initialize() {
-        try {
-            PluginRepository repository = (PluginRepository)this.load();
-            if (repository == this) {
-                throw new Exception();
-            }
-            repository.account = repository.account.initialize();
-            return repository;
-        }
-        catch (Exception ex) {
-            save();
-            return this;
-        }
-    }
-
-    @Override
-    public void save() {
-        account.save();
-        super.save();
     }
 }

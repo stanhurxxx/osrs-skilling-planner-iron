@@ -67,6 +67,13 @@ public class MenuButton extends JPanel implements EditableComponent {
     /** The runnables to run on click */
     private List<Runnable> onClickRunnables = new ArrayList<>();
 
+    /** GET The last mouse event */
+    public MouseEvent event() {
+        return event;
+    }
+    /** The last mouse event */
+    private MouseEvent event = null;
+
     /**
      * Constructs a MenuButton with the specified icon.
      *
@@ -82,6 +89,7 @@ public class MenuButton extends JPanel implements EditableComponent {
         addMouseListener(new MouseAdapter() {
             @Override
             public void mouseReleased(MouseEvent e) {
+                event = e;
                 for (Runnable runnable : onClickRunnables) {
                     runnable.run();
                 }

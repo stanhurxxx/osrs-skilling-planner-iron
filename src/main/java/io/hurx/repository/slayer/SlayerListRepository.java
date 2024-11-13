@@ -1,5 +1,7 @@
 package io.hurx.repository.slayer;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
@@ -13,6 +15,7 @@ import io.hurx.models.slayer.monsters.Monsters;
 import io.hurx.models.slayer.monsters.SlayerMonsters;
 import io.hurx.plugin.slayer.SlayerOptions;
 import io.hurx.plugin.slayer.views.list.SlayerListViews;
+import io.hurx.plugin.slayer.views.list.views.manageTasks.SlayerTaskSorting;
 
 /**
  * The SlayerListRepository class manages a list of Slayer-related data.
@@ -49,7 +52,10 @@ public class SlayerListRepository extends Repository<SlayerRepository> {
     
     /** The sub-view of the Slayer list (e.g., ManageTasks). */
     public Repository.Property<SlayerListViews> view = new Repository.Property<>(SlayerListViews.ManageTasks);
-    
+
+    /** The sorting of the slayer tasks */
+    public Repository.Property<SlayerTaskSorting> taskSorting = new Property<>(SlayerTaskSorting.KillCount);
+
     /** The current Slayer master. */
     public Repository.Property<SlayerMasters> master = new Repository.Property<>(SlayerMasters.Duradel);
     
@@ -66,10 +72,10 @@ public class SlayerListRepository extends Repository<SlayerRepository> {
     public Repository.Property<Monsters> selectedVariant = new Repository.Property<>(null);
     
     /** Variations of Slayer monsters and their respective percentages. */
-    public Repository.Property.Map<SlayerMonsters, Repository.Property.Map<Monsters, Integer>> variations = new Repository.Property.Map<>();
+    public Repository.Property.Map<SlayerMonsters, java.util.Map<Monsters, Integer>> variations = new Repository.Property.Map<>();
     
     /** Orders of variations for each Slayer monster. */
-    public Repository.Property.Map<SlayerMonsters, Repository.Property.List<Monsters>> variationOrders = new Repository.Property.Map<>();
+    public Repository.Property.Map<SlayerMonsters, java.util.List<Monsters>> variationOrders = new Repository.Property.Map<>();
     
     /** Extended monsters for Slayer tasks. */
     public Repository.Property.Map<SlayerMonsters, Boolean> extendedMonsters = new Repository.Property.Map<>();
@@ -134,63 +140,55 @@ public class SlayerListRepository extends Repository<SlayerRepository> {
     @Override
     public SlayerListRepository initialize() {
         try {
-            SlayerListRepository repository = (SlayerListRepository)load();
-            if (repository == this) {
-                throw new Exception();
-            }
-            return repository;
+            super.load();
+            fillData();
         }
         catch (Exception ex) {
-            if (!isInitialized) {
+            fillData();
+        }
+        return this;
+    }
 
-                // Populate initial values for the Slayer monsters
-                for (SlayerMonsters monster : SlayerMonsters.values()) {
-                    Repository.Property.Map<Monsters, Integer> variation = new Repository.Property.Map<Monsters, Integer>();
+    /** Fills with dummy data when not initialized */
+    public void fillData() {
+        // Populate initial values for the Slayer monsters
+        for (SlayerMonsters monster : SlayerMonsters.values()) {
+            java.util.Map<Monsters, Integer> variation = new HashMap<>();
 
-                    // Fill the variation orders for the monster
-                    variationOrders.set(monster, new Repository.Property.List<Monsters>().add(monster.getMonsters()));
+            // Fill the variation orders for the monster
+            variationOrders.set(monster, new ArrayList<>());
 
-                    // Set the default bracelet for the monster
-                    bracelets.set(monster, SlayerBracelets.None);
+            // Set the default bracelet for the monster
+            bracelets.set(monster, SlayerBracelets.None);
 
-                    // Loop through the variants of the monster
-                    Monsters[] monsters = monster.getMonsters();
-                    for (int i = 0; i < monsters.length; i++) {
-                        Monsters variant = monsters[i];
-                        variation.set(variant, i == 0 ? 100 : 0); // Set variation percentage
+            // Loop through the variants of the monster
+            Monsters[] monsters = monster.getMonsters();
+            for (int i = 0; i < monsters.length; i++) {
+                Monsters variant = monsters[i];
+                variation.put(variant, i == 0 ? 100 : 0); // Set variation percentage
 
-                        if (variant.getStats().getSlayer() == null) {
-                            // Set default combat styles and rates for monsters without Slayer stats
-                            meleeStyles.set(variant, CombatStyle.DefenceLast);
-                            meleeHourlyRates.set(variant, 110_000);
-                            rangedStyles.set(variant, CombatStyle.Ranged);
-                            rangedHourlyRates.set(variant, 0);
-                            magicStyles.set(variant, CombatStyle.Magic);
-                            magicHourlyRates.set(variant, 0);
-                        } else {
-                            // Set combat styles and rates for monsters with Slayer stats
-                            meleeStyles.set(variant, CombatStyle.None);
-                            meleeHourlyRates.set(variant, 0);
-                            rangedStyles.set(variant, CombatStyle.Ranged);
-                            rangedHourlyRates.set(variant, variant.getStats().getHitpoints() * 4);
-                            magicStyles.set(variant, CombatStyle.None);
-                            meleeHourlyRates.set(variant, 0);
-                            monsterCompletionTimes.set(variant, variant == Monsters.Zuk ? 75 : 30);
-                        }
-                    }
-
-                    // Set the variation percentages for the monster
-                    variations.set(monster, variation);
-                }
-                isInitialized(true);
-                try {
-                    save();
-                } catch (Exception e) {
-                    e.printStackTrace();
+                if (variant.getStats().getSlayer() == null) {
+                    // Set default combat styles and rates for monsters without Slayer stats
+                    meleeStyles.set(variant, CombatStyle.DefenceLast);
+                    meleeHourlyRates.set(variant, 110_000);
+                    rangedStyles.set(variant, CombatStyle.Ranged);
+                    rangedHourlyRates.set(variant, 0);
+                    magicStyles.set(variant, CombatStyle.Magic);
+                    magicHourlyRates.set(variant, 0);
+                } else {
+                    // Set combat styles and rates for monsters with Slayer stats
+                    meleeStyles.set(variant, CombatStyle.None);
+                    meleeHourlyRates.set(variant, 0);
+                    rangedStyles.set(variant, CombatStyle.Ranged);
+                    rangedHourlyRates.set(variant, variant.getStats().getHitpoints() * 4);
+                    magicStyles.set(variant, CombatStyle.None);
+                    meleeHourlyRates.set(variant, 0);
+                    monsterCompletionTimes.set(variant, variant == Monsters.Zuk ? 75 : 30);
                 }
             }
+
+            // Set the variation percentages for the monster
+            variations.set(monster, variation);
         }
-        
-        return this;
     }
 }

@@ -1,15 +1,13 @@
 package io.hurx.plugin;
 
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.KeyEvent;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.*;
 
-import io.hurx.components.table.Table;
+import io.hurx.models.repository.Repository;
 import io.hurx.models.views.ViewManagement;
 import io.hurx.utils.Theme;
 import net.runelite.client.ui.DynamicGridLayout;
@@ -31,11 +29,6 @@ public class PluginPanel extends net.runelite.client.ui.PluginPanel {
     private Plugin plugin;
 
     /**
-     * Indicates whether the panel is ready for rendering.
-     */
-    private boolean ready = false;
-
-    /**
      * Keeps track of the reloaded masters, so they don't reload more than once.
      */
     private List<ViewManagement.Entity.Master<?, ?>> reloadedMasters = new ArrayList<>();
@@ -50,30 +43,12 @@ public class PluginPanel extends net.runelite.client.ui.PluginPanel {
     }
 
     /**
-     * Checks if the panel is ready for rendering.
-     *
-     * @return {@code true} if the panel is ready; {@code false} otherwise
-     */
-    public boolean isReady() {
-        return ready;
-    }
-
-    /**
-     * Sets the ready state of the panel.
-     *
-     * @param ready the new ready state to set
-     */
-    public void setReady(boolean ready) {
-        this.ready = ready;
-    }
-
-    /**
      * Constructs a {@code PluginPanel} with the specified plugin instance.
      *
      * @param plugin the instance of the plugin associated with this panel
      * @throws Exception if an error occurs during panel initialization
      */
-    public PluginPanel(Plugin plugin) throws Exception {
+    public PluginPanel(Plugin plugin) {
         this.plugin = plugin;
         setLayout(new DynamicGridLayout(0, 1, 0, 0)); // Sets the layout manager for this panel
         setOpaque(true); // Makes the panel opaque
@@ -96,25 +71,14 @@ public class PluginPanel extends net.runelite.client.ui.PluginPanel {
      */
     public void render() {
         masterHierarchy.clear();
-        if (!ready) return;
+        reloadedMasters.clear();
 
-        // Reload all outdated repositories
-        reloadRepositories();
-
-        // Run all on change view runnables
+        // First run all on change view runnables, they come before "beforeRender"
         for (Runnable runnable : getPlugin().getMaster().getOnChangeViewRunnables()) {
             runnable.run();
         }
 
-        // Run all on before render runnables
-        List<ViewManagement.Entity.Container<?, ?, ?>> onBeforeRenderContainers = new ArrayList<>();
-        findOnBeforeRendersToExecuteInMaster(plugin.getMaster(), onBeforeRenderContainers);
-        for (int i = onBeforeRenderContainers.size() - 1; i >= 0; i --) {
-            ViewManagement.Entity.Container<?, ?, ?> container = onBeforeRenderContainers.get(i);
-            for (Runnable runnable : container.onnBeforeRenderRunnables()) {
-                runnable.run();
-            }
-        }
+        beforeRender();
 
         // Find what's to be rendered
         List<JComponent> toBeRendered = new ArrayList<>();
@@ -137,18 +101,47 @@ public class PluginPanel extends net.runelite.client.ui.PluginPanel {
             setComponentZOrder(c, i);
         }
 
+        // Mark all repositories as no longer "wasDirty"
+        for (Repository<?> repository : Repository.registered.values()) {
+            repository.wasDirty(false);
+        }
+
         // Repaint the panel
         revalidate();
         repaint();
     }
 
-    /**
-     * Reloads all repositories in the plugin's master entity.
-     */
-    public void reloadRepositories() {
-        reloadedMasters.clear();
-        reloadRepositoriesInMaster(getPlugin().getMaster());
-        reloadedMasters.clear();
+    /** Saves all changed repositories and calls before renders */
+    public void beforeRender() {
+        // Save all repositories and mark them as wasDirty if they were.
+        List<Repository> repositories = new ArrayList<>();
+        List<Repository<?>> toBeSaved = new ArrayList<>();
+        for (Repository<?> repository : Repository.registered.values()) {
+            repositories.add(repository);
+        }
+        for (Repository<?> repository : repositories) {
+            File file = new File(repository.generatePath() + ".json");
+            if (repository.isDirty()) {
+                repository.wasDirty(true);
+                toBeSaved.add(repository);
+            }
+            else if (file.lastModified() != repository.lastModified()) {
+                Repository.registered.put(repository.generatePath(), repository.initialize());
+            }
+        }
+        for (Repository<?> repository : toBeSaved) {
+            repository.save();
+        }
+
+        // Run all on before render runnables
+        List<ViewManagement.Entity.Container<?, ?, ?>> onBeforeRenderContainers = new ArrayList<>();
+        findOnBeforeRendersToExecuteInMaster(plugin.getMaster(), onBeforeRenderContainers);
+        for (int i = onBeforeRenderContainers.size() - 1; i >= 0; i --) {
+            ViewManagement.Entity.Container<?, ?, ?> container = onBeforeRenderContainers.get(i);
+            for (Runnable runnable : container.onnBeforeRenderRunnables()) {
+                runnable.run();
+            }
+        }
     }
 
     /**
@@ -158,13 +151,15 @@ public class PluginPanel extends net.runelite.client.ui.PluginPanel {
      */
     private void findOnBeforeRendersToExecuteInMaster(ViewManagement.Entity.Master<?, ?> master, List<ViewManagement.Entity.Container<?, ?, ?>> containers) {
         if (reloadedMasters.contains(master)) return;
-        File file = new File(master.getRepository().generatePath() + ".json");
-        if (file.lastModified() != master.getRepository().lastModified()) {
-            master.getRepository().initialize(); // Initialize the repository associated with the master entity.
-        }
         reloadedMasters.add(master); // Keep track of reloaded masters
         for (ViewManagement.Entity.Container<?, ?, ?> container : master.getContainers()) {
             findOnBeforeRendersToExecuteInContainer(container, containers); // Reload repositories in each container of the master.
+        }
+        for (ViewManagement.Entity.Master<?, ?>.OneToMany oneToMany : master.oneToManyRelations()) {
+            if (oneToMany.getView() == null) continue;
+            for (ViewManagement.Entity.Container<?, ?, ?> container : oneToMany.getView().getContainers()) {
+                findOnBeforeRendersToExecuteInContainer(container, containers);
+            }
         }
         for (ViewManagement.Entity.View<?, ?, ?> view : master.getViews()) {
             for (ViewManagement.Entity.Container<?, ?, ?> container : view.getContainers()) {
@@ -186,44 +181,6 @@ public class PluginPanel extends net.runelite.client.ui.PluginPanel {
             }
             else if (element instanceof ViewManagement.Entity.Container) {
                 findOnBeforeRendersToExecuteInContainer((ViewManagement.Entity.Container<?, ?, ?>) element, containers);
-            }
-        }
-    }
-
-    /**
-     * Recursively reloads repositories in the specified master entity.
-     *
-     * @param master the master entity from which to reload repositories
-     */
-    private void reloadRepositoriesInMaster(ViewManagement.Entity.Master<?, ?> master) {
-        if (reloadedMasters.contains(master)) return;
-        File file = new File(master.getRepository().generatePath() + ".json");
-        if (file.lastModified() != master.getRepository().lastModified()) {
-            master.getRepository().initialize(); // Initialize the repository associated with the master entity.
-        }
-        reloadedMasters.add(master); // Keep track of reloaded masters
-        for (ViewManagement.Entity.Container<?, ?, ?> container : master.getContainers()) {
-            reloadRepositoriesInContainer(container); // Reload repositories in each container of the master.
-        }
-        for (ViewManagement.Entity.View<?, ?, ?> view : master.getViews()) {
-            for (ViewManagement.Entity.Container<?, ?, ?> container : view.getContainers()) {
-                reloadRepositoriesInContainer(container); // Reload repositories in each container of the view.
-            }
-        }
-    }
-
-    /**
-     * Reloads repositories in the specified container.
-     *
-     * @param container the container from which to reload repositories
-     */
-    private void reloadRepositoriesInContainer(ViewManagement.Entity.Container<?, ?, ?> container) {
-        for (ViewManagement.Entity.Element element : container.getElements()) {
-            if (element instanceof ViewManagement.Entity.Master) {
-                reloadRepositoriesInMaster((ViewManagement.Entity.Master<?, ?>) element); // Recursively reload repositories if the element is a master.
-            }
-            else if (element instanceof ViewManagement.Entity.Container) {
-                reloadRepositoriesInContainer((ViewManagement.Entity.Container<?, ?, ?>) element);
             }
         }
     }

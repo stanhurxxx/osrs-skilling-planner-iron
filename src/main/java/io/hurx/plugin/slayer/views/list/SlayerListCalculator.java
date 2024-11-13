@@ -24,7 +24,7 @@ public class SlayerListCalculator {
     private float skippedWeight = 0;
 
     private Map<SlayerMonsters, Map<Monsters, Float>> taskFrequencyImpact = new HashMap<>();
-    private float totalTaskFrequencyImpact = 0;
+    private float totalTaskFrequencyImpact = 0f;
 
     private Map<SlayerMonsters, Map<Monsters, Float>> killsPerHour = new HashMap<>();
 
@@ -58,8 +58,11 @@ public class SlayerListCalculator {
             else {
                 doWeight += assignment.getWeight();
             }
+        }
 
-            // Calculate the impact of the task compared to all tasks in this list
+        // Calculate the impact of the task compared to all tasks in this list
+        for (SlayerAssignment assignment : master.getMaster().getAssignments()) {
+            SlayerMonsters monster = assignment.getMonster();
             taskFrequencyImpact.put(assignment.getMonster(), taskFrequencyImpact.getOrDefault(assignment.getMonster(), new HashMap<>()));
             for (Monsters variant : monster.getMonsters()) {
                 rates.put(monster, rates.getOrDefault(monster, new HashMap<>()));
@@ -87,7 +90,7 @@ public class SlayerListCalculator {
 
                 CombatStyle magicStyle = list.magicStyles.get(variant, CombatStyle.Magic);
                 float magicXpRate = list.magicHourlyRates.get(variant, 0);
-                float magicHitXp = (((magicXpRate / 1200) - magicStyle.getBaseXp()) * 1200); // one hit xp
+                float magicHitXp = Math.max(0, (((magicXpRate / 1200) - magicStyle.getBaseXp()) * 1200)); // one hit xp
                 float magicHit = CombatStyle.getDefensiveMagic().contains(magicStyle) ? (magicHitXp / 1.33f) : magicHitXp / 2;
                 defenceXpRate += CombatStyle.getDefensiveMagic().contains(magicStyle) ? (magicHitXp / 1.33f) * (1.0f / 1.33f) : 0;
 
@@ -104,7 +107,7 @@ public class SlayerListCalculator {
                 boolean isExtended = list.extendedMonsters.get(monster, false);
                 int maxExtended = assignment.getMaxExtended() == null ? 0 : assignment.getMaxExtended();
                 int minExtended = assignment.getMinExtended() == null ? 0 : assignment.getMinExtended();
-                float variationPercentage = list.variations.get(monster, new Repository.Property.Map<>()).get(variant, 0);
+                float variationPercentage = list.variations.get(monster, new HashMap<>()).getOrDefault(variant, 0);
                 float amountPerTask = isExtended
                         ? minExtended + ((maxExtended - minExtended) / 2)
                         : assignment.getMin() + ((assignment.getMax() - assignment.getMin()) / 2);
@@ -138,18 +141,31 @@ public class SlayerListCalculator {
     }
 
     public SlayerListRepository getList() {
-        SlayerListRepository list = repository.getParent().findListByFileName(repository.getUuid());
+        SlayerListRepository list = repository.getParent().findListByFileName(repository.uuid());
         return list;
     }
 
     public float getXpPerHour() {
-        return this.getXpPerHour(null);
+        return this.getXpPerHour((Skills)null);
+    }
+
+    /** Get the slayer xp per hour for a slayer monster */
+    public float getXpPerHour(SlayerMonsters monster) {
+        float taskFrequencyImpact = 0f;
+        float totalXpPerHour = 0f;
+        for (Monsters v : monster.getMonsters()) {
+            float impact = this.taskFrequencyImpact.getOrDefault(monster, new HashMap<>()).getOrDefault(v, 0f);
+            taskFrequencyImpact += impact;
+            float xpPerHour = this.rates.getOrDefault(monster, new HashMap<>()).getOrDefault(v, new HashMap<>()).getOrDefault(Skills.Slayer, 0f);
+            totalXpPerHour += impact * xpPerHour;
+        }
+        return totalXpPerHour / taskFrequencyImpact;
     }
 
     public float getXpPerHour(Skills skill) {
-        float xpPerHour = 0;
+        float xpPerHour = 0f;
         for (SlayerMonsters monster : this.rates.keySet()) {
-            float effectiveXpPerHour = 0;
+            float effectiveXpPerHour = 0f;
 
             Map<Monsters, Map<Skills, Float>> monsterRates = this.rates.getOrDefault(monster, new HashMap<>());
             for (Monsters variant : monsterRates.keySet()) {
@@ -158,7 +174,8 @@ public class SlayerListCalculator {
                 Map<Skills, Float> variantRates = monsterRates.getOrDefault(variant, new HashMap<>());
                 for (Skills variantSkill : variantRates.keySet()) {
                     if (skill == null || skill == variantSkill) {
-                        float xpRate = variantRates.get(variantSkill);
+                        float xpRate = variantRates.getOrDefault(variantSkill, 0f);
+                        if (xpRate == 0f) continue;
                         effectiveXpPerHour += xpRate * taskFrequencyImpactVariant;
                     }
                 }
@@ -196,35 +213,76 @@ public class SlayerListCalculator {
     public float getKillCount(String planningUuid, SlayerMonsters monster, Monsters variant) {
         SlayerListRepository list = getList();
         if (list == null) return 0;
-        float killCount = 0;
-        float xpPerHour = getXpPerHour(Skills.Slayer);
+
+        // Calculate the remaining xp for the list
+        float currentXP = repository.getParent().getParent().xp.get(Skills.Slayer, 0f);
+        float remainingXP = 0f;
         for (SlayerPlanningRepository planning : repository.getParent().plannings.values()) {
-            if (planning.listUuid.isNull() || !planning.listUuid.get().equals(list.getUuid())
-                    || (planningUuid != null && !planning.getUuid().equals(planningUuid))) continue;
-
-            if (planning.listUuid.get().equals(list.getUuid()) && (planningUuid == null || planning.getUuid().equals(planningUuid))) {
-                float xpGained = planning.endXP.get() - planning.startXP.get();
-                float hours = xpGained / xpPerHour;
-                for (SlayerMonsters m : SlayerMonsters.values()) {
-                    if (monster != null && m != monster) continue;
-
-                    Map<Monsters, Float> variantKillsPerHour = this.killsPerHour.getOrDefault(m, new HashMap<>());
-
-                    for (Monsters v : m.getMonsters()) {
-                        if (v != null && v != variant) continue;
-
-                        float taskFrequencyImpact = getTaskFrequencyImpact(monster, v);
-                        float hoursVariant = taskFrequencyImpact / this.totalTaskFrequencyImpact * hours;
-                        float killsPerHour = variantKillsPerHour.getOrDefault(v, 0f);
-
-                        if (killsPerHour > 0) {
-                            killCount += hoursVariant / killsPerHour;
-                        }
-                    }
+            if (planningUuid == null) {
+                if (planning.listUuid.isNull() || !planning.listUuid.isEqualTo(repository.uuid())) {
+                    continue;
                 }
             }
+            else {
+                if (planning.listUuid.isNull() || !planning.listUuid.isEqualTo(repository.uuid())) {
+                    continue;
+                }
+                if (planning.uuid() == null || !planning.uuid().equals(planningUuid)) {
+                    continue;
+                }
+            }
+            if (!planning.listUuid.isEqualTo(repository.uuid())) continue;
+            float planningStartXP = Math.max(0, planning.startXP.get() - currentXP);
+            float planningEndXP = Math.max(0, planning.endXP.get() - currentXP);
+            remainingXP += planningEndXP - planningStartXP;
         }
-        return killCount;
+
+        // Calculate the effective xp per monster
+        float taskFrequencyImpact = 0f;
+        for (SlayerAssignment assignment : repository.master.get().getMaster().getAssignments()) {
+            if (monster != null && assignment.getMonster() != monster) continue;
+            float monsterTaskFrequencyImpact = 0;
+
+            for (Monsters v : assignment.getMonster().getMonsters()) {
+                if (variant != null && v != variant) continue;
+
+                float variantTaskFrequencyImpact = getTaskFrequencyImpact(v);
+
+                monsterTaskFrequencyImpact += variantTaskFrequencyImpact;
+            }
+
+            taskFrequencyImpact += monsterTaskFrequencyImpact;
+        }
+
+        // Only calculate when the task is done
+        if (taskFrequencyImpact == 0f) return 0f;
+
+        // Calculate the kills per hour
+        float effectiveKillsPerHour = 0f;
+        for (SlayerAssignment assignment : repository.master.get().getMaster().getAssignments()) {
+            if (monster != null && assignment.getMonster() != monster) continue;
+
+            for (Monsters v : assignment.getMonster().getMonsters()) {
+                if (variant != null && v != variant) continue;
+
+                float variantTaskFrequencyImpact = getTaskFrequencyImpact(v);
+                float killsPerHour = this.killsPerHour.getOrDefault(assignment.getMonster(), new HashMap<>()).getOrDefault(v, 0f);
+
+                effectiveKillsPerHour += (variantTaskFrequencyImpact / taskFrequencyImpact) * killsPerHour;
+            }
+        }
+
+        // Set the remaining xp only for the monster/variant selection
+        remainingXP *= (taskFrequencyImpact / this.totalTaskFrequencyImpact);
+
+        // Calculate the hours
+        float xpPerHour = this.getXpPerHour(Skills.Slayer);
+        if (xpPerHour == 0) return 0f;
+        float hours = remainingXP / this.getXpPerHour(Skills.Slayer);
+        if (hours == 0f) return 0f;
+
+        // The kill count
+        return effectiveKillsPerHour * hours;
     }
 
     public float getTaskFrequencyImpact(SlayerMonsters monster, Monsters variant) {

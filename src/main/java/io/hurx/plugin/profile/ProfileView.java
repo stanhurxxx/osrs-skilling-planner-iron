@@ -2,8 +2,6 @@ package io.hurx.plugin.profile;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.exc.MismatchedInputException;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import io.hurx.components.Label;
 import io.hurx.components.Padding;
 import io.hurx.components.button.Button;
@@ -18,12 +16,9 @@ import io.hurx.plugin.PluginMaster;
 import io.hurx.plugin.PluginViews;
 import io.hurx.repository.PluginRepository;
 import io.hurx.repository.ProfileRepository;
-import io.hurx.repository.slayer.SlayerListRepository;
-import io.hurx.repository.slayer.SlayerPlanningRepository;
-import io.hurx.repository.slayer.SlayerRepository;
+import io.hurx.utils.Deserializers;
 import io.hurx.utils.Json;
 import io.hurx.utils.Theme;
-import net.runelite.http.api.config.Profile;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -42,8 +37,8 @@ public class ProfileView extends ViewManagement.Entity.View<PluginMaster, Plugin
     public static class Container extends ViewManagement.Entity.Container<PluginMaster, PluginRepository, PluginViews> {
         @Override
         public boolean isVisible() {
-            return getMaster().getRepository().view.get() == PluginViews.Profile
-                || getMaster().getRepository().account.getProfile() == null;
+            return getMaster().getRepository().account.getProfile() == null
+                || getMaster().getRepository().account.getProfile().view.isEqualTo(PluginViews.Profile);
         }
 
         private final TextField textField = new TextField("New profile").onChange(this::create);
@@ -75,14 +70,12 @@ public class ProfileView extends ViewManagement.Entity.View<PluginMaster, Plugin
             // Open the load dialog
             int userSelection = fileChooser.showOpenDialog(null);
 
-            boolean reload = false;
-
             // If the user selects a file
             if (userSelection == JFileChooser.APPROVE_OPTION) {
                 File fileToLoad = fileChooser.getSelectedFile();
                 try {
-                    Json.includeSerializationIgnoreFields(true);
-                    ProfileRepository profileRepository = (ProfileRepository) new ProfileRepository(getMaster().getRepository()).upload(fileToLoad);
+                    ProfileRepository profileRepository = Repository.upload(fileToLoad, ProfileRepository.class);
+                    profileRepository.save();
 
                     getMaster().getRepository().profiles.add(profileRepository);
                     getMaster().getRepository().save();
@@ -92,7 +85,6 @@ public class ProfileView extends ViewManagement.Entity.View<PluginMaster, Plugin
                     JOptionPane.showMessageDialog(null, "Error importing profile: " + e.getMessage());
                     e.printStackTrace();
                 }
-                Json.includeSerializationIgnoreFields(false);
             }
         }
 
@@ -101,13 +93,13 @@ public class ProfileView extends ViewManagement.Entity.View<PluginMaster, Plugin
             ProfileRepository profileRepository = new ProfileRepository(getMaster().getRepository(), UUID.randomUUID().toString());
             profileRepository.name.replace(textField.getText());
             profileRepository = profileRepository.initialize();
-            profileRepository.save();
 
             getMaster().getRepository().profiles.add(profileRepository);
-            getMaster().getRepository().account.profileUuid.replace(profileRepository.getUuid());
+            getMaster().getRepository().getAccount().profileUuid.replace(profileRepository.uuid());
+            getMaster().getRepository().getAccount().save();
             getMaster().getRepository().save();
 
-            getMaster().getRoot().render();
+            getMaster().getRoot().getPlugin().initialize();
         }
 
         public static class SelectProfileListContainer extends ViewManagement.Entity.Container<PluginMaster, PluginRepository, PluginViews> {
@@ -148,15 +140,15 @@ public class ProfileView extends ViewManagement.Entity.View<PluginMaster, Plugin
                 add(new Padding(Theme.TITLE_V_PADDING));
                 for (ProfileRepository repository : getMaster().getRepository().profiles.values()) {
                     if (getMaster().getRepository().account.profileUuid.get() != null
-                            && repository.getUuid() != null
-                            && getMaster().getRepository().account.profileUuid.get().equals(repository.getUuid())) {
+                            && repository.uuid() != null
+                            && getMaster().getRepository().account.profileUuid.get().equals(repository.uuid())) {
                         add(new SelectProfileEntryComponent(this, repository));
                     }
                 }
                 for (ProfileRepository repository : getMaster().getRepository().profiles.values()) {
                     if (getMaster().getRepository().account.profileUuid.get() == null
-                            || repository.getUuid() == null
-                            || !getMaster().getRepository().account.profileUuid.get().equals(repository.getUuid())) {
+                            || repository.uuid() == null
+                            || !getMaster().getRepository().account.profileUuid.get().equals(repository.uuid())) {
                         add(new SelectProfileEntryComponent(this, repository));
                     }
                 }
@@ -182,8 +174,8 @@ public class ProfileView extends ViewManagement.Entity.View<PluginMaster, Plugin
                 /** Shorthand for checking if this profile is selected */
                 public boolean isSelected() {
                     return getContainer().getMaster().getRepository().account.profileUuid.get() != null
-                            && profile.getUuid() != null
-                            && getContainer().getMaster().getRepository().account.profileUuid.get().equals(profile.getUuid());
+                            && profile.uuid() != null
+                            && getContainer().getMaster().getRepository().account.profileUuid.get().equals(profile.uuid());
                 }
 
                 /** GET The mouse listener for the table. */
@@ -191,34 +183,34 @@ public class ProfileView extends ViewManagement.Entity.View<PluginMaster, Plugin
                     return new MouseAdapter() {
                         @Override
                         public void mouseReleased(MouseEvent e) {
-                            if (e.getButton() == MouseEvent.BUTTON3) {
-                                JPopupMenu popupMenu = new JPopupMenu();
-                                JMenuItem exportProfile = new JMenuItem("Export profile");
-                                exportProfile.addActionListener(new ActionListener() {
-                                    @Override
-                                    public void actionPerformed(ActionEvent e) {
-                                        download();
-                                    }
-                                });
-                                JMenuItem duplicateProfile = new JMenuItem("Duplicate profile");
-                                duplicateProfile.addActionListener(new ActionListener() {
-                                    @Override
-                                    public void actionPerformed(ActionEvent e) {
-                                        duplicate();
-                                    }
-                                });
-                                JMenuItem deleteProfile = new JMenuItem("Delete profile");
-                                deleteProfile.addActionListener(new ActionListener() {
-                                    @Override
-                                    public void actionPerformed(ActionEvent e) {
-                                        delete();
-                                    }
-                                });
-                                popupMenu.add(exportProfile);
-                                popupMenu.add(duplicateProfile);
-                                popupMenu.add(deleteProfile);
-                                popupMenu.show(e.getComponent(), e.getX(), e.getY());
-                            }
+                        if (e.getButton() == MouseEvent.BUTTON3) {
+                            JPopupMenu popupMenu = new JPopupMenu();
+                            JMenuItem exportProfile = new JMenuItem("Export profile");
+                            exportProfile.addActionListener(new ActionListener() {
+                                @Override
+                                public void actionPerformed(ActionEvent e) {
+                                    download();
+                                }
+                            });
+                            JMenuItem duplicateProfile = new JMenuItem("Duplicate profile");
+                            duplicateProfile.addActionListener(new ActionListener() {
+                                @Override
+                                public void actionPerformed(ActionEvent e) {
+                                    duplicate();
+                                }
+                            });
+                            JMenuItem deleteProfile = new JMenuItem("Delete profile");
+                            deleteProfile.addActionListener(new ActionListener() {
+                                @Override
+                                public void actionPerformed(ActionEvent e) {
+                                    delete();
+                                }
+                            });
+                            popupMenu.add(exportProfile);
+                            popupMenu.add(duplicateProfile);
+                            popupMenu.add(deleteProfile);
+                            popupMenu.show(e.getComponent(), e.getX(), e.getY());
+                        }
                         }
                     };
                 }
@@ -244,33 +236,31 @@ public class ProfileView extends ViewManagement.Entity.View<PluginMaster, Plugin
                     String name = textField == null ? profile.name.get() : textField.getText();
                     name = name.isEmpty() ? "Unnamed profile" : name;
                     Label label = (Label) new Label(new Object[] {
-                            new Label.Plain(name)
-                                    .isSelected(isSelected())
-                                    .hoverable(true)
-                                    .mouseListener(new MouseAdapter() {
-                                @Override
-                                public void mouseReleased(MouseEvent e) {
-                                    if (e.getButton() == MouseEvent.BUTTON1) {
-                                        select();
-                                    }
-                                }
-                            }),
-                            new MenuButton(MenuButtons.Edit)
+                        new Label.Plain(name)
                                 .isSelected(isSelected())
-                                .onClick(this::edit)
+                                .hoverable(true)
+                                .mouseListener(new MouseAdapter() {
+                            @Override
+                            public void mouseReleased(MouseEvent e) {
+                                if (e.getButton() == MouseEvent.BUTTON1) {
+                                    select();
+                                }
+                            }
+                        }),
+                        new MenuButton(MenuButtons.Edit)
+                            .isSelected(isSelected())
+                            .onClick(this::edit)
                     }).mouseListener(mouseListener());
                     if (textField != null) {
                         profile.name.replace(name);
-                        profile.save();
                     }
                     setComponent(label);
                 }
 
                 /** Selects the profile of this component */
                 public void select() {
-                    getContainer().getMaster().getRepository().account.profileUuid.replace(profile.getUuid());
-                    getContainer().getMaster().getRepository().save();
-                    getRoot().render();
+                    getContainer().getMaster().getRepository().account.profileUuid.replace(profile.uuid());
+                    getContainer().getMaster().getRoot().getPlugin().initialize();
                 }
 
                 /** Downloads the profile to .json */
@@ -286,7 +276,7 @@ public class ProfileView extends ViewManagement.Entity.View<PluginMaster, Plugin
                         if (!fileToSave.getName().endsWith(".json")) {
                             fileToSave = new File(fileToSave.getAbsolutePath() + ".json");
                         }
-                        Json.includeSerializationIgnoreFields(true);
+                        Deserializers.includeSerializationIgnoreFields(true);
                         try (BufferedWriter writer = new BufferedWriter(new FileWriter(fileToSave))) {
                             Json.objectMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
                             String jsonString = profile.download();
@@ -300,7 +290,7 @@ public class ProfileView extends ViewManagement.Entity.View<PluginMaster, Plugin
                             ex.printStackTrace();
                             JOptionPane.showMessageDialog(null, "Error exporting profile: " + ex.getMessage());
                         }
-                        Json.includeSerializationIgnoreFields(false);
+                        Deserializers.includeSerializationIgnoreFields(false);
                     }
                 }
 
@@ -317,7 +307,7 @@ public class ProfileView extends ViewManagement.Entity.View<PluginMaster, Plugin
                     );
                     if (newName == null) return;
                     if (newName.isEmpty()) newName = "Unnamed profile";
-                    ProfileRepository duplicate = (ProfileRepository) profile.duplicate().copy();
+                    ProfileRepository duplicate = (ProfileRepository) profile.duplicate();
                     duplicate.name.replace(newName);
                     getContainer().getMaster().getRepository().profiles.add(duplicate);
                     getContainer().getMaster().getRepository().save();
@@ -338,7 +328,6 @@ public class ProfileView extends ViewManagement.Entity.View<PluginMaster, Plugin
                     );
                     if (option == JOptionPane.YES_OPTION) {
                         getContainer().getMaster().getRepository().profiles.remove(profile);
-                        getContainer().getMaster().getRepository().save();
                         getRoot().render();
                     }
                 }

@@ -4,72 +4,44 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
+import java.lang.reflect.*;
 import java.util.*;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.exc.MismatchedInputException;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.databind.type.TypeFactory;
 
-import com.google.gson.JsonObject;
-import io.hurx.annotations.SerializationIgnore;
+import io.hurx.annotations.OneToOne;
 import io.hurx.models.repository.exceptions.RepositoryFileCorruptedException;
 import io.hurx.annotations.ManyToOne;
 import io.hurx.models.IconPaths;
 import io.hurx.models.repository.exceptions.PlayerNotLoggedInException;
 import io.hurx.plugin.Plugin;
-import io.hurx.repository.AccountRepository;
 import io.hurx.repository.PluginRepository;
-import io.hurx.repository.ProfileRepository;
-import io.hurx.repository.slayer.SlayerListRepository;
-import io.hurx.repository.slayer.SlayerPlanningRepository;
-import io.hurx.repository.slayer.SlayerRepository;
+import io.hurx.utils.Deserializers;
 import io.hurx.utils.Injects;
 import io.hurx.utils.Json;
-
-import javax.inject.Inject;
+import io.hurx.utils.Serializers;
 
 /**
  * Abstract class representing a repository for managing cached data.
  *
  * @param <R> The type of the repository that extends this class.
  */
+@JsonDeserialize(using = Deserializers.Repository.class)
+@JsonSerialize(using = Serializers.Repository.class)
 public abstract class Repository<R extends Repository<?>> {
+    /** Registered repositories */
+    @JsonIgnore
+    public static Map<String, Repository<?>> registered = new HashMap<>();
+
     /** Checks all Repository.Property properties to see if they are marked as dirty. */
     public boolean isDirty() {
         for (Field field : getClass().getDeclaredFields()) {
-            if (Repository.Property.Map.class.isAssignableFrom(field.getType())) {
-                try {
-                    Property.Map<?, ?> map = (Property.Map<?, ?>) field.get(this);
-                    if (map.isDirty()) {
-                        return true;
-                    }
-                } catch (IllegalAccessException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-            else if (Repository.Property.List.class.isAssignableFrom(field.getType())) {
-                try {
-                    Property.List<?> list = (Property.List<?>) field.get(this);
-                    if (list.isDirty()) {
-                        return true;
-                    }
-                } catch (IllegalAccessException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-            else if (Repository.Property.class.isAssignableFrom(field.getType())) {
+            if (Repository.Property.class.isAssignableFrom(field.getType())) {
                 try {
                     Property<?> property = (Property<?>) field.get(this);
                     if (property.isDirty()) {
@@ -85,25 +57,10 @@ public abstract class Repository<R extends Repository<?>> {
     /** Marks all Repository.Property properties to be not dirty anymore. */
     public void isDirty(boolean isDirty) {
         for (Field field : getClass().getDeclaredFields()) {
-            if (Repository.Property.Map.class.isAssignableFrom(field.getType())) {
-                try {
-                    Property.Map<?, ?> map = (Property.Map<?, ?>) field.get(this);
-                    map.isDirty(isDirty);
-                } catch (IllegalAccessException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-            else if (Repository.Property.List.class.isAssignableFrom(field.getType())) {
-                try {
-                    Property.List<?> list = (Property.List<?>) field.get(this);
-                    list.isDirty(isDirty);
-                } catch (IllegalAccessException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-            else if (Repository.Property.class.isAssignableFrom(field.getType())) {
+            if (Repository.Property.class.isAssignableFrom(field.getType())) {
                 try {
                     Property<?> property = (Property<?>) field.get(this);
+                    if (property == null) continue;
                     property.isDirty(isDirty);
                 } catch (IllegalAccessException e) {
                     throw new RuntimeException(e);
@@ -111,6 +68,40 @@ public abstract class Repository<R extends Repository<?>> {
             }
         }
     }
+
+    /** GET: Was the repository dirty before the last render? */
+    @JsonIgnore
+    public boolean wasDirty() {
+        if (this.isDirty()) {
+            this.wasDirty = true;
+        }
+        return this.wasDirty;
+    }
+    /** SET: Was the repository dirty before the last render? */
+    @JsonIgnore
+    public void wasDirty(boolean wasDirty) {
+        for (Field field : getClass().getDeclaredFields()) {
+            if (Repository.Property.class.isAssignableFrom(field.getType())) {
+                try {
+                    Property<?> property = (Property<?>) field.get(this);
+                    if (property == null) continue;
+                    if (property.isDirty() && wasDirty) {
+                        property.wasDirty(true);
+                    }
+                    else if (!wasDirty) {
+                        property.wasDirty(false);
+                    }
+                    property.wasDirty(wasDirty);
+                } catch (IllegalAccessException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+        this.wasDirty = wasDirty;
+    }
+    /** Was the repository dirty before the last render? */
+    @JsonIgnore
+    private boolean wasDirty = true;
 
     @JsonIgnore
     public <T extends Repository<?>> T get(Class<T> clazz, String fileName) {
@@ -198,8 +189,15 @@ public abstract class Repository<R extends Repository<?>> {
      *
      * @return The uuid.
      */
-    public String getUuid() {
+    public String uuid() {
         return uuid;
+    }
+    /** SET the uuid */
+    public void uuid(String uuid) {
+        this.uuid = uuid;
+        if (!registered.containsKey(this.generatePath())) {
+            registered.put(this.generatePath(), this);
+        }
     }
 
     /**
@@ -231,7 +229,7 @@ public abstract class Repository<R extends Repository<?>> {
         Plugin plugin = null;
 
         // Traverse the parent hierarchy to find the first non-null Plugin
-        while (p != null) {
+        while (p != null && p.getParent() != p) {
             plugin = p.getPlugin();
             if (plugin != null) {
                 return p.getPlugin();
@@ -243,57 +241,169 @@ public abstract class Repository<R extends Repository<?>> {
     }
 
     /** Initializes the repository */
-    public abstract Repository<R> initialize();
+    @SuppressWarnings("unchecked")
+    public <T extends Repository<R>> T initialize() {
+        try {
+            load();
+            if (!isInitialized) {
+                fillData();
+                isInitialized(true);
+            }
+        } catch (PlayerNotLoggedInException e) {
+            System.out.println("Could not initialize " + this.getClass().getName() + "... Player not logged in.");
+        } catch (RepositoryFileCorruptedException e) {
+            fillData();
+            isInitialized(true);
+        } catch (IOException e) {
+            if (!isInitialized) {
+                fillData();
+                isInitialized(true);
+            }
+        }
+        return (T) Repository.registered.get(generatePath());
+    }
 
     /** Imports a repository by json file */
-    public Repository<?> upload(File jsonFile) throws IOException, MismatchedInputException {
+    public static<T extends Repository<?>> T upload(File jsonFile, Class<T> clazz) throws IOException, MismatchedInputException {
+        Deserializers.includeSerializationIgnoreFields(true);
+        Deserializers.justStartedUpload(true);
+        Deserializers.Repository.currentClass(clazz);
+        Deserializers.Repository.currentNode(Json.objectMapper.readTree(jsonFile));
         Json.objectMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
-        Repository<?> repository = Json.objectMapper.readValue(jsonFile, getClass());
-        repository.save();
-        return repository;
+        Repository<?> repository = Json.objectMapper.readValue(jsonFile, clazz);
+        repository.isInitialized(true);
+        Deserializers.justStartedUpload(false);
+        Deserializers.includeSerializationIgnoreFields(false);
+        return (T) repository;
     }
 
     /** Imports a repository by json */
-    public Repository<?> upload(String serialized) throws JsonProcessingException {
+    public static<T extends Repository<?>> T upload(String serialized, Class<T> clazz) throws JsonProcessingException {
+        Deserializers.includeSerializationIgnoreFields(true);
+        Deserializers.justStartedUpload(true);
+        Deserializers.Repository.currentClass(clazz);
+        Deserializers.Repository.currentNode(Json.objectMapper.readTree(serialized));
         Json.objectMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
-        Repository<?> repository = Json.objectMapper.readValue(serialized, getClass());
-        repository.save();
-        return repository;
-    }
-
-    /** Copies the repository (changes uuid on current instance, for new instance use duplicate) */
-    public Repository<R> copy() {
-        this.uuid = generateUuid();
-        save();
-        return this;
+        Repository<?> repository = Json.objectMapper.readValue(serialized, clazz);
+        repository.isInitialized(true);
+        Deserializers.justStartedUpload(false);
+        Deserializers.includeSerializationIgnoreFields(false);
+        return (T) repository;
     }
 
     /** Duplicates a repository (copy with new instance) */
+    public<R extends Repository<?>> R duplicate() {
+        return duplicate(null);
+    }
+
+    /** Duplicates a repository (copy with new instance) and assigns a uuid */
     @SuppressWarnings("unchecked")
-    public Repository<R> duplicate() {
+    public<R extends Repository<?>> R duplicate(String uuid) {
         try {
-            Json.includeSerializationIgnoreFields(true);
-            Repository<R> upload = (Repository<R>) upload(Json.objectMapper.writeValueAsString(this));
-            Json.includeSerializationIgnoreFields(false);
-            return upload.copy();
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+            R repository = null;
+            try {
+                repository = (R) Deserializers.Repository.createRepositoryFromFileName(getClass(), uuid == null ? UUID.randomUUID().toString() : uuid);
+            } catch (Exception ex) {
+                System.out.println("Coulnd't instantiate repository while duplicating.");
+                ex.printStackTrace();
+            }
+            if (repository == null) return null;
+            repository.isInitialized(true);
+            Injects.setInjectable((Class<R>)getClass(), repository);
+            Class<?> clazz = this.getClass();
+            while (clazz != null && clazz != clazz.getSuperclass()) {
+                for (Field field : clazz.getDeclaredFields()) {
+                    field.setAccessible(true);
+                    if (field.getName().equals("uuid")) {
+                        continue;
+                    }
+                    if (field.isAnnotationPresent(JsonIgnore.class)) {
+                        continue;
+                    }
+                    else if (field.isAnnotationPresent(OneToOne.class)) {
+                        Repository<?> oneToOne = (Repository<?>) field.get(this);
+                        field.set(repository, oneToOne.duplicate());
+                    }
+                    else if (field.isAnnotationPresent(ManyToOne.class)) {
+                        Repository.Property.List<Repository<?>> thisList = (Property.List<Repository<?>>) field.get(this);
+                        Repository.Property.List<Repository<?>> otherList = (Property.List<Repository<?>>) field.get(repository);
+                        for (Repository<?> r : thisList.values()) {
+                            otherList.add(r.duplicate(r.uuid()));
+                        }
+                    }
+                    else if (Repository.Property.List.class.isAssignableFrom(field.getType())) {
+                        Repository.Property.List<Object> thisList = (Property.List<Object>) field.get(this);
+                        Repository.Property.List<Object> otherList = (Property.List<Object>) field.get(repository);
+                        for (Object r : thisList.values()) {
+                            otherList.add(r);
+                        }
+                    }
+                    else if (Repository.Property.Map.class.isAssignableFrom(field.getType())) {
+                        Repository.Property.Map<Object, Object> thisMap = (Property.Map<Object, Object>) field.get(this);
+                        Repository.Property.Map<Object, Object> otherMap = (Property.Map<Object, Object>) field.get(repository);
+                        Type gType = field.getGenericType();
+                        if (gType instanceof ParameterizedType) {
+                            ParameterizedType param = (ParameterizedType) gType;
+                            Type keyType = param.getActualTypeArguments()[0];
+                            Type valueType = param.getActualTypeArguments()[1];
+                            if (keyType instanceof Class && valueType instanceof Class) {
+                                for (Object r : thisMap.keySet()) {
+                                    String jsonKey = Json.objectMapper.writeValueAsString(r);
+                                    String jsonValue = Json.objectMapper.writeValueAsString(thisMap.get(r));
+                                    otherMap.set(
+                                        Json.objectMapper.readValue(jsonKey, (Class<?>) keyType),
+                                        Json.objectMapper.readValue(jsonValue, (Class<?>) valueType)
+                                    );
+                                }
+                            }
+                        }
+                    }
+                    else if (Repository.Property.class.isAssignableFrom(field.getType())) {
+                        Repository.Property<Object> thisProperty = (Property<Object>) field.get(this);
+                        Repository.Property<Object> otherProperty = (Property<Object>) field.get(repository);
+                        Type gType = field.getGenericType();
+                        if (gType instanceof ParameterizedType) {
+                            ParameterizedType param = (ParameterizedType) gType;
+                            Type type = param.getActualTypeArguments()[0];
+                            otherProperty.replace(Json.objectMapper.readValue(Json.objectMapper.writeValueAsString(thisProperty.get()), (Class<?>) type));
+                        }
+                    }
+                    else {
+                        field.set(repository, Json.objectMapper.readValue(Json.objectMapper.writeValueAsString(field.get(this)), field.getType()));
+                    }
+                }
+                clazz = clazz.getSuperclass();
+            }
+
+            // Reset
+            Injects.setInjectable((Class<Repository<?>>)getClass(), this);
+
+            return repository;
+        } catch (Exception ignored) {
+            // Reset
+            Injects.setInjectable((Class<Repository<?>>)getClass(), this);
+
+            ignored.printStackTrace();
         }
+        return null;
     }
 
     /** Exports a repository to json */
     public String download() throws JsonProcessingException {
-        Json.includeSerializationIgnoreFields(true);
+        Deserializers.includeSerializationIgnoreFields(true);
         try {
-            String download = Json.objectMapper.writeValueAsString(this);
-            Json.includeSerializationIgnoreFields(false);
+            String download = Json.objectMapper.writeValueAsString(this.duplicate());
+            Deserializers.includeSerializationIgnoreFields(false);
             return download;
         }
         catch (Exception ex) {
-            Json.includeSerializationIgnoreFields(false);
+            Deserializers.includeSerializationIgnoreFields(false);
             throw ex;
         }
     }
+
+    /** Override this to fill the data upon initialization */
+    public void fillData() {}
 
     /**
      * Constructs a new Repository with the specified parent and file name.
@@ -301,11 +411,15 @@ public abstract class Repository<R extends Repository<?>> {
      * @param parent The parent repository.
      * @param uuid The file name associated with this repository.
      */
+    @SuppressWarnings("unchecked")
     public Repository(R parent, String uuid) {
-        this();
         this.parent = parent;
         this.uuid = uuid;
         this.plugin = parent.getPlugin();
+        if (!registered.containsKey(this.generatePath())) {
+            registered.put(this.generatePath(), this);
+        }
+        Injects.setInjectable((Class<Repository<?>>)getClass(), registered.get(this.generatePath()));
     }
 
     /**
@@ -314,138 +428,86 @@ public abstract class Repository<R extends Repository<?>> {
      * @param plugin The associated Plugin.
      * @param uuid The uuid for the repository.
      */
+    @SuppressWarnings("unchecked")
     public Repository(Plugin plugin, String uuid) {
-        this();
         this.parent = null; // No parent in this case
         this.uuid = uuid;
         this.plugin = plugin;
-    }
-
-    /**
-     * Inititializes the (de)serializer for this repository into the
-     * global objectMapper.
-     */
-    private Repository() {
-        SimpleModule module = new SimpleModule();
-        module.addDeserializer(getClass(), this.new Deserializer<>());
-        module.addSerializer(getClass(), this.new Serializer<>());
-        Json.objectMapper.registerModule(module);
-    }
-
-    /**
-     * Static function to create a repository based on a class and a filename. If it throws an exception, something is wrong with the code.
-     * @param clazz the class
-     * @param fileName the filename
-     * @return the repository, or null if failed.
-     */
-    public static Repository<?> createRepositoryFromFileName(Class<?> clazz, String fileName) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
-        Repository<?> instance = null;
-        Constructor<?> constructor = null;
-        if (fileName != null) {
-            for (Constructor<?> c : clazz.getDeclaredConstructors()) {
-                if (c.getParameters().length == 2 && Repository.class.isAssignableFrom(c.getParameters()[0].getType()) && String.class.isAssignableFrom(c.getParameters()[1].getType())) {
-                    // priority
-                    constructor = c;
-                    break;
-                }
-                else if (c.getParameters().length == 2 && Plugin.class.isAssignableFrom(c.getParameters()[0].getType()) && String.class.isAssignableFrom(c.getParameters()[1].getType())) {
-                    constructor = c;
-                    fileName = Plugin.accountHash();
-                }
-            }
+        if (!registered.containsKey(this.generatePath())) {
+            registered.put(this.generatePath(), this);
         }
-        if (constructor == null) {
-            for (Constructor<?> c : clazz.getDeclaredConstructors()) {
-                if (c.getParameters().length == 1 && Repository.class.isAssignableFrom(c.getParameters()[0].getType())) {
-                    constructor = c;
-                    break;
-                }
-                else if (c.getParameters().length == 1 && Plugin.class.isAssignableFrom(c.getParameters()[0].getType())) {
-                    constructor = c;
-                    break;
-                }
-            }
-            if (constructor == null) {
-                return null;
-            }
-            else {
-                instance = (Repository<?>)constructor.newInstance(Injects.getInjectableValues().get(constructor.getParameters()[0].getType()));
-            }
-        }
-        else {
-            instance = (Repository<?>)constructor.newInstance(Injects.getInjectableValues().get(constructor.getParameters()[0].getType()), fileName);
-        }
-        return (Repository<?>)instance;
+        Injects.setInjectable((Class<Repository<?>>)getClass(), registered.get(this.generatePath()));
     }
 
     /**
      * Saves the current state of the repository to a JSON file in the cache directory.
-     *
-     * @throws PlayerNotLoggedInException When the player is not found.
      */
     @SuppressWarnings("unchecked")
     public void save() {
         String fileName = generatePath(); // Generate the path for the cache file
 
-        // Recursively save
-//        for (Field field : getClass().getDeclaredFields()) {
-//            if (Repository.class.isAssignableFrom(field.getType())) {
-//                try {
-//                    Repository<Repository<R>> repository = (Repository<Repository<R>>) field.get(this);
-//                    if (repository != null) {
-//                        repository.parent = this;
-//                        repository.save();
-//                    }
-//                } catch (IllegalAccessException e) {
-//                    throw new RuntimeException(e);
-//                }
-//            }
-//            else if (Repository.Property.Map.class.isAssignableFrom(field.getType())) {
-//                try {
-//                    Repository.Property.Map<Object, Object> property = (Repository.Property.Map<Object, Object>) field.get(this);
-//                    if (property != null) {
-//                        for (Object key : property.keySet()) {
-//                            Object value = property.get(key);
-//                            if (value instanceof Repository) {
-//                                Repository<Repository<R>> repository = (Repository<Repository<R>>) value;
-//                                repository.parent = this;
-//                                repository.save();
-//                            }
-//                        }
-//                    }
-//                } catch (IllegalAccessException e) {
-//                    throw new RuntimeException(e);
-//                }
-//            }
-//            else if (Repository.Property.List.class.isAssignableFrom(field.getType())) {
-//                try {
-//                    Property.List<Object> property = (Property.List<Object>) field.get(this);
-//                    if (property != null) {
-//                        for (Object value : property.values()) {
-//                            if (value instanceof Repository) {
-//                                Repository<Repository<R>> repository = (Repository<Repository<R>>) value;
-//                                repository.parent = this;
-//                                repository.save();
-//                            }
-//                        }
-//                    }
-//                } catch (IllegalAccessException e) {
-//                    throw new RuntimeException(e);
-//                }
-//            }
-//            else if (Repository.Property.class.isAssignableFrom(field.getType())) {
-//                try {
-//                    Property<Object> property = (Property<Object>) field.get(this);
-//                    if (property != null && property.get() instanceof Repository) {
-//                        Repository<Repository<R>> repository = (Repository<Repository<R>>) property.get();
-//                        repository.parent = this;
-//                        repository.save();
-//                    }
-//                } catch (IllegalAccessException e) {
-//                    throw new RuntimeException(e);
-//                }
-//            }
-//        }
+        for (Field field : getClass().getDeclaredFields()) {
+            // Save all many to ones
+            if (field.isAnnotationPresent(ManyToOne.class)) {
+                if (Property.List.class.isAssignableFrom(field.getType())) {
+                    try {
+                        Property.List<Object> list = (Property.List<Object>)field.get(this);
+                        for (int i = 0; i < list.size(); i ++) {
+                            Object value = list.get(i);
+                            if (value instanceof Repository) {
+                                Repository<?> repo = ((Repository<?>) value);
+                                if (!repo.isInitialized) {
+                                    list.set(i, repo.initialize());
+                                }
+                                else {
+                                    repo.save();
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex) {
+                        System.out.println("Could not save one to one relation.");
+                        ex.printStackTrace();
+                    }
+                }
+            }
+            // Save all one to ones
+            else if (field.isAnnotationPresent(OneToOne.class)) {
+                if (Repository.class.isAssignableFrom(field.getType())) {
+                    try {
+                        Repository<?> repository = (Repository<?>) field.get(this);
+                        if (repository == null) continue;
+                        if (!repository.isInitialized) {
+                            field.set(this, repository.initialize());
+                        }
+                        else {
+                            repository.save();
+                        }
+                    }
+                    catch (Exception ex) {
+                        System.out.println("Could not save one to one relation.");
+                        ex.printStackTrace();
+                    }
+                }
+            }
+        }
+        for (Method method : getClass().getDeclaredMethods()) {
+            if (method.isAnnotationPresent(OneToOne.class)) {
+                try {
+                    Repository<?> repository = (Repository<?>) method.invoke(this);
+                    if (repository != null) {
+                        if (!repository.isInitialized) {
+                            repository.initialize();
+                        }
+                        else {
+                            repository.save();
+                        }
+                    }
+                } catch (Exception ex) {
+                    System.out.println("Could not save one to one relation in method.");
+                }
+            }
+        }
 
         if (lastModified != 0 && !isDirty() && new File(fileName + ".json").exists()) return;
         if (fileName == null) return; // Exit if the file name is invalid
@@ -461,10 +523,13 @@ public abstract class Repository<R extends Repository<?>> {
                 writer.write(jsonString);
                 lastModified((new File(fileName + ".json")).lastModified());
                 isDirty(false);
+                // Save in local cache
+                Repository.registered.put(generatePath(), initialize());
             } catch (IOException e) {
                 e.printStackTrace(); // Log any IO exceptions
             }
-        } catch (JsonProcessingException e) {
+        }
+        catch (JsonProcessingException e) {
             e.printStackTrace(); // Log any JSON processing exceptions
         }
     }
@@ -477,7 +542,7 @@ public abstract class Repository<R extends Repository<?>> {
      * @throws IOException When the cache file cannot be opened.
      */
     @SuppressWarnings("unchecked")
-    public Repository<R> load() throws PlayerNotLoggedInException, RepositoryFileCorruptedException, IOException {
+    public void load() throws PlayerNotLoggedInException, RepositoryFileCorruptedException, IOException {
         String fileName = generatePath(); // Get the file name to load
 
         if (fileName == null) {
@@ -485,87 +550,37 @@ public abstract class Repository<R extends Repository<?>> {
             throw new PlayerNotLoggedInException("Could not load player, player is offline.");
         }
 
-        // Already existing repository
-        if (Injects.getRepositoriesByFileName().containsKey(getUuid())) {
-            loadOneToManies();
-        }
-
-        Injects.setInjectable((Class<Repository<R>>)getClass(), this);
-
         // Check if the JSON file exists
         File file = new File(fileName + ".json");
 
         // Do nothing if the file hasn't changed
-        if (lastModified == file.lastModified() && !isDirty()) return this;
+        if (lastModified == file.lastModified() && !isDirty()) return;
 
         // Set modification timestamp
         this.lastModified(file.lastModified());
 
         if (file.exists()) {
             try {
-                @SuppressWarnings("unchecked")
-                Repository<R> data = Json.objectMapper.readValue(new File(fileName + ".json"), getClass());
+                Deserializers.Repository.currentNode(Json.objectMapper.readTree(new File(fileName + ".json")));
+                Deserializers.Repository.currentClass(getClass());
+                Repository<R> data = Deserializers.Repository.currentNode().traverse(Json.objectMapper).readValueAs(getClass());
                 Json.objectMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
-                if (data == null) return this;
-
-                // Existing; Deserialize each field
-                if (Injects.getRepositoriesByFileName().containsKey(data.getUuid())) {
-                    @SuppressWarnings("unchecked")
-                    Repository<R> existing = (Repository<R>)Injects.getRepositoriesByFileName().get(data.getUuid());
-                    for (Field field : existing.getClass().getDeclaredFields()) {
-                        deserializeField(field, data, this);
-                    }
-                    existing.isDirty(false);
-                    Injects.setInjectable((Class<Repository<R>>)getClass(), existing);
-                    return existing;
+                if (data == null) return;
+                uuid(data.uuid());
+                isInitialized(data.isInitialized());
+                System.out.println(getClass().getName() + " : " + (isInitialized ? "true" : "false"));
+                for (Field field : data.getClass().getDeclaredFields()) {
+                    field.setAccessible(true);
+                    deserializeField(field, data, this);
                 }
-                // New; Add the new repository to the map
-                else {
-                    Injects.getRepositoriesByFileName().put(data.getUuid(), data);
-                    loadOneToManies();
-                    data.isDirty(false);
-                    Injects.setInjectable((Class<Repository<R>>)getClass(), data);
-                    return data;
-                }
+                isDirty(false);
+                lastModified(file.lastModified());
             } catch (Exception e) {
                 e.printStackTrace();
                 throw new RepositoryFileCorruptedException(); // Throw if an error occurs during loading
             }
         } else {
             throw new IOException("No previous user input found."); // Log if no previous data exists
-        }
-    }
-
-    /** Loads one to many relations */
-    private void loadOneToManies() {
-        // Update all many to one relations
-        for (Field field : getClass().getDeclaredFields()) {
-            if (field.isAnnotationPresent(ManyToOne.class)) {
-                // Repository.Property.List<Repository<?>> list =
-                if (field.getType() == Repository.Property.Map.class) {
-                    try {
-                        @SuppressWarnings("unchecked")
-                        Repository.Property.Map<String, Repository<?>> map = (Repository.Property.Map<String, Repository<?>>)field.get(this);
-                        for (String key : map.value.keySet()) {
-                            Property<Repository<?>> property = map.value.get(key);
-                            property.get().initialize();
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-                else if (field.getType() == Repository.Property.List.class) {
-                    try {
-                        @SuppressWarnings("unchecked")
-                        Repository.Property.List<Repository<?>> list = (Repository.Property.List<Repository<?>>)field.get(this);
-                        for (Property<Repository<?>> property : list.properties()) {
-                            property.get().initialize();
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
         }
     }
 
@@ -632,7 +647,7 @@ public abstract class Repository<R extends Repository<?>> {
             }
             // Other
             else {
-                field.set(objectNew, valueCurrent);
+                field.set(objectCurrent, valueNew);
             }
         } catch (IllegalArgumentException e) {
             e.printStackTrace();
@@ -665,10 +680,10 @@ public abstract class Repository<R extends Repository<?>> {
         Repository<?> parent = this.getParent(); // Get the parent repository
 
         // Construct the full path by traversing up the parent hierarchy
-        while (parent != null) {
+        while (parent != null && parent != parent.getParent()) {
             if (parent.getSavedFileName() != null) {
                 String parentDirName = parent.getDirName();
-                String parentFileName = parent.getUuid();
+                String parentFileName = parent.uuid();
                 String parentPath = "";
                 if (parentDirName != null && !parentDirName.isEmpty()) {
                     parentPath = parentDirName;
@@ -696,10 +711,10 @@ public abstract class Repository<R extends Repository<?>> {
 
         if (getSavedFileName() != null) {
             if (path.isEmpty()) {
-                path += getUuid();
+                path += uuid();
             }
             else {
-                path += "/" + getUuid();
+                path += "/" + uuid();
             }
 
             // Create the parent directories.
@@ -733,8 +748,8 @@ public abstract class Repository<R extends Repository<?>> {
      *
      * @param <V> The type of the value stored in this Property.
      */
-    @JsonSerialize(using = Property.Serializer.class)
-    @JsonDeserialize(using = Property.Deserializer.class)
+    @JsonSerialize(using = Serializers.Property.class)
+    @JsonDeserialize(using = Deserializers.Property.class)
     public static class Property<V> {
         protected V value; // The current value of the property
 
@@ -749,9 +764,30 @@ public abstract class Repository<R extends Repository<?>> {
         /** Flag that marks the property as dirty (having changed since last save) */
         protected boolean isDirty = false;
 
+        /** GET Flag that marks the property as having been dirty during this render cycle. */
+        public boolean wasDirty() {
+            return wasDirty;
+        }
+        /** SET Flag that marks the property as having been dirty during this render cycle. */
+        public void wasDirty(boolean wasDirty) {
+            this.wasDirty = wasDirty;
+        }
+        /** Flag that marks the property as having been dirty during this render cycle. */
+        protected boolean wasDirty = false;
+
         // A list of listeners that are notified when the property's value changes
         @JsonIgnore
         private final java.util.List<Listener<V>> listeners = new ArrayList<>();
+
+        /** Removes a listener */
+        public void removeListener(Object listener) {
+            for (int i = 0; i < listeners.size(); i ++) {
+                if (listeners.get(i) == listener) {
+                    listeners.remove(i);
+                    break;
+                }
+            }
+        }
 
         /**
          * Constructs a new Property with the specified initial value.
@@ -772,9 +808,21 @@ public abstract class Repository<R extends Repository<?>> {
             return value; // Return the current value
         }
 
+        /** Get the current value of the property, or resorts to a default value */
+        @JsonIgnore
+        public V getOrDefault(V defaultValue) {
+            return value == null ? defaultValue : value;
+        }
+
         /** Checks if the value is null */
         public boolean isNull() {
             return this.value == null;
+        }
+
+        /** Checks whether the value is equal to another value, also contains null checks */
+        public boolean isEqualTo(V value) {
+            return (value == null && this.value == null)
+                || (value != null && this.value != null && (this.value.equals(value) || this.value == value));
         }
 
         /**
@@ -785,7 +833,14 @@ public abstract class Repository<R extends Repository<?>> {
         @SuppressWarnings("unchecked")
         @JsonIgnore
         public void replace(V value) {
-            if (value instanceof Property.Map) {
+            if (value == null) {
+                V oldValue = this.value;
+                this.value = null;
+                for (Listener<V> listener : listeners) {
+                    listener.onSet(oldValue, value);
+                }
+            }
+            else if (value instanceof Property.Map) {
                 ((Property.Map<Object, Object>)this.value).replace((Property.Map<Object, Object>)value);
             }
             else if (value instanceof Property.List) {
@@ -837,6 +892,8 @@ public abstract class Repository<R extends Repository<?>> {
          *
          * @param <V> The type of the values contained in this list.
          */
+        @JsonDeserialize(using = Deserializers.List.class)
+        @JsonSerialize(using = Serializers.Property.class)
         public static class List<V> extends Property<java.util.List<Property<V>>> {
             // A list of listeners that are notified when changes occur to the list
             @JsonIgnore
@@ -892,32 +949,13 @@ public abstract class Repository<R extends Repository<?>> {
             }
 
             /**
-             * Checks whether the list contains one or multiple values
-             * @param values the values
-             * @return true if it contains all values
-             */
-            public final boolean contains(@SuppressWarnings("unchecked") V... values) {
-                for (V value : values) {
-                    boolean found = false;
-                    for (Property<V> property : this.value) {
-                        if (property.get() == value || property.get().equals(value)) {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found) return false;
-                }
-                return true;
-            }
-
-            /**
              * Adds one or more values to the list and notifies listeners.
              *
              * @param values The values to add.
              * @return This List instance for method chaining.
              */
             @SafeVarargs
-            public final List<V> add(V... values) {
+            public final List<V> add(V ...values) {
                 java.util.List<Runnable> onDone = new ArrayList<>(); // Actions to perform after adding values
                 for (V value : values) {
                     int index = this.value.size(); // Index at which to add the value
@@ -978,13 +1016,23 @@ public abstract class Repository<R extends Repository<?>> {
             }
 
             /**
-             * Checks if the list contains a specified value.
+             * Checks if the list contains one or more specified values.
              *
-             * @param value The value to check for.
-             * @return True if the list contains the value, false otherwise.
+             * @param values The values to check for.
+             * @return True if the list contains the value(s), false otherwise.
              */
-            public boolean contains(V value) {
-                return this.value.contains(value); // Check if value is in the list
+            public boolean contains(V ...values) {
+                for (V value : values) {
+                    boolean found = false;
+                    for (Property<V> property : this.value) {
+                        if (property.isEqualTo(value)) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) return false;
+                }
+                return true;
             }
 
             /**
@@ -1036,10 +1084,9 @@ public abstract class Repository<R extends Repository<?>> {
              * @param index The index at which to set the new value.
              * @param value The new value to set.
              * @return This List instance for method chaining.
-             * @throws JsonProcessingException If there is an error during serialization.
              */
             @JsonIgnore
-            public List<V> set(int index, V value) throws JsonProcessingException {
+            public List<V> set(int index, V value) {
                 if (index < this.value.size()) {
                     V oldValue = this.value.get(index).get(); // Store the old value
                     this.value.get(index).replace(value);
@@ -1189,13 +1236,8 @@ public abstract class Repository<R extends Repository<?>> {
             /**
              * Constructs a new List with an empty ArrayList as its initial value.
              */
-            @SuppressWarnings({ "rawtypes", "unchecked" })
             public List() {
-                super(new ArrayList<Property<V>>()); // Initialize the property with an empty list
-                SimpleModule module = new SimpleModule();
-                module.addDeserializer((Class<Property.List<V>>)getClass(), new Deserializer());
-                module.addSerializer((Class<Property.List<V>>)getClass(), new Serializer());
-                Json.objectMapper.registerModule(module);
+                super(new ArrayList<Property<V>>());
             }
 
             /**
@@ -1250,6 +1292,8 @@ public abstract class Repository<R extends Repository<?>> {
          * @param <K> the type of keys maintained by this map
          * @param <V> the type of mapped values
          */
+        @JsonSerialize(using = Serializers.Property.class)
+        @JsonDeserialize(using = Deserializers.Map.class)
         public static class Map<K, V> extends Property<HashMap<K, Property<V>>> {
             /**
              * The event listeners
@@ -1307,7 +1351,7 @@ public abstract class Repository<R extends Repository<?>> {
                     }
                     else {
                         // Add
-                        this.set(key, currentValue.get(key).get());
+                        this.set(key, currentValue.get(key) == null ? null : currentValue.get(key).get());
                     }
                 }
                 isDirty = true;
@@ -1409,6 +1453,7 @@ public abstract class Repository<R extends Repository<?>> {
                 Property<V> oldProperty = this.value.get(property);
                 V oldValue = oldProperty == null ? null : oldProperty.get();
                 if (isNew) this.value.put(property, new Property<V>(newValue));
+                else this.value.get(property).replace(newValue);
                 java.util.List<Runnable> onDone = new ArrayList<>();
 
                 if (oldProperty instanceof Property.List) {
@@ -1523,13 +1568,8 @@ public abstract class Repository<R extends Repository<?>> {
             /**
              * Constructs an empty map with an internal {@link HashMap} to hold entries.
              */
-            @SuppressWarnings({ "unchecked", "rawtypes" })
             public Map() {
-                super(new HashMap<K, Property<V>>());
-                SimpleModule module = new SimpleModule();
-                module.addDeserializer((Class<Property.Map<K, V>>)getClass(), new Deserializer());
-                module.addSerializer((Class<Property.Map<K, V>>)getClass(), new Serializer());
-                Json.objectMapper.registerModule(module);
+                super(new HashMap<>());
             }
 
             /**
@@ -1604,346 +1644,6 @@ public abstract class Repository<R extends Repository<?>> {
              * has been removed or otherwise made obsolete.
              */
             public void onDelete() {}
-        }
-
-        /**
-         * The serializer for properties, lists and maps.
-         * @param <V>
-         */
-        public static class Serializer<V> extends JsonSerializer<Property<V>> {
-            @Override
-            public void serialize(Property<V> value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
-                if (value != null) {
-                    gen.writeObject(value.value);
-                }
-                else {
-                    gen.writeNull();
-                }
-            }
-        }
-
-        /**
-         * The deserializer for properties, lists and maps.
-         * @param <V>
-         */
-        public static class Deserializer<V> extends JsonDeserializer<Property<V>> {
-            @SuppressWarnings({ "rawtypes", "unchecked" })
-            @Override
-            public Property<V> deserialize(JsonParser parser, DeserializationContext ctxt) throws IOException, JsonProcessingException {
-                // Read the JSON as a JsonNode
-                // try
-                JsonNode node = parser.getCodec().readTree(parser);
-                Field field = Json.currentField();
-                if (field == null) {
-                    throw new IOException("Current field is empty, so there's a Repository.Property being deserialized, before a Repository is being deserialized. They can only be used within repositories.");
-                }
-
-                // TODO: test
-                if (field.getType() == Repository.Property.Map.class) {
-                    Type gType = field.getGenericType();
-                    if (gType instanceof ParameterizedType) {
-                        ParameterizedType param = (ParameterizedType) gType;
-                        Type keyType = param.getActualTypeArguments()[0];
-                        Type valueType = param.getActualTypeArguments()[1];
-                        Map<Object, Object> map = new Map<>();
-                        ManyToOne manyToOne = field.isAnnotationPresent(ManyToOne.class)
-                            ? field.getAnnotation(ManyToOne.class)
-                            : null;
-                        if (node.isArray() && manyToOne != null) {
-                            if (Json.includeSerializationIgnoreFields()) {
-                                for (JsonNode element : node) {
-                                    map.set(element.get("uuid").asText(), Json.objectMapper.readValue(element.traverse(Json.objectMapper), TypeFactory.defaultInstance().constructType(valueType)));
-                                }
-                            }
-                            else {
-                                for (JsonNode element : node) {
-                                    try {
-                                        if (element.isObject()) {
-                                            Repository<?> repository = Repository.createRepositoryFromFileName(manyToOne.type(), element.get("uuid").asText()).initialize();
-                                            map.set(element.get("uuid").asText(), repository);
-                                        }
-                                        else if (element.isTextual()) {
-                                            Repository<?> repository = Repository.createRepositoryFromFileName(manyToOne.type(), element.asText()).initialize();
-                                            map.set(element.asText(), repository);
-                                        }
-                                    } catch (Exception e) {
-                                        System.out.println("Couldn't instantiate repository.");
-                                        e.printStackTrace();
-                                        throw new RuntimeException(e);
-                                    }
-                                }
-                            }
-                        }
-                        else if (node.isObject()) {
-                            Iterator<java.util.Map.Entry<String, JsonNode>> iterator = node.fields();
-                            while (iterator.hasNext()) {
-                                java.util.Map.Entry<String, JsonNode> entry = iterator.next();
-                                map.set(
-                                    Json.objectMapper.readValue(entry.getKey(), TypeFactory.defaultInstance().constructType(keyType)),
-                                    Json.objectMapper.readValue(entry.getValue().traverse(Json.objectMapper), TypeFactory.defaultInstance().constructType(valueType))
-                                );
-                            }
-                        }
-                        return (Property<V>)map;
-                    }
-                }
-                else if (field.getType() == Repository.Property.List.class) {
-                    Type gType = field.getGenericType();
-                    if (gType instanceof ParameterizedType) {
-                        ParameterizedType param = (ParameterizedType) gType;
-                        Type type = param.getActualTypeArguments()[0];
-                        List<Object> list = new List<>();
-                        if (node.isArray()) {
-                            ManyToOne manyToOne = field.isAnnotationPresent(ManyToOne.class)
-                                ? field.getAnnotation(ManyToOne.class)
-                                : null;
-                            for (JsonNode element : node) {
-                                if (manyToOne == null) {
-                                    list.add(Json.objectMapper.readValue(element.traverse(Json.objectMapper), TypeFactory.defaultInstance().constructType(type)));
-                                }
-                                else {
-                                    if (Json.includeSerializationIgnoreFields()) {
-                                        try {
-                                            Repository<?> repository = createRepositoryFromFileName(manyToOne.type(), null).upload(Json.objectMapper.writeValueAsString(element));
-                                            list.add(repository);
-                                        } catch (InstantiationException e) {
-                                            throw new RuntimeException(e);
-                                        } catch (IllegalAccessException e) {
-                                            throw new RuntimeException(e);
-                                        } catch (InvocationTargetException e) {
-                                            throw new RuntimeException(e);
-                                        }
-                                    }
-                                    else {
-                                        try {
-                                            if (element.isObject()) {
-                                                list.add(Repository.createRepositoryFromFileName(manyToOne.type(), element.get("uuid").asText()).initialize());
-                                            }
-                                            else if (element.isTextual()) {
-                                                list.add(Repository.createRepositoryFromFileName(manyToOne.type(), element.asText()).initialize());
-                                            }
-                                        } catch (Exception e) {
-                                            System.out.println("Couldn't instantiate repository.");
-                                            e.printStackTrace();
-                                            throw new RuntimeException(e);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        return (Property<V>)list;
-                    }
-                }
-                else if (field.getType() == Repository.Property.class) {
-                    try {
-                        Type gType = field.getGenericType();
-                        if (gType instanceof ParameterizedType) {
-                            ParameterizedType param = (ParameterizedType) gType;
-                            Type type = param.getActualTypeArguments()[0];
-                            Property<V> property = new Property(Json.objectMapper.readValue(node.traverse(Json.objectMapper), TypeFactory.defaultInstance().constructType(type)));
-                            return property;
-                        }
-                    }
-                    catch (Exception ex) {
-                        ex.printStackTrace();
-                        return null;
-                    }
-                }
-                return null;
-            }
-        }
-    }
-
-    /**
-     * The serializer for repositories.
-     * @param <V>
-     */
-    public class Serializer<V extends Repository<?>> extends JsonSerializer<V> {
-        @SuppressWarnings("unchecked")
-        @Override
-        public void serialize(V value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
-            if (value != null) {
-                // Start writing a JSON object
-                gen.writeStartObject();
-
-                Class<?> clazz = value.getClass();
-                while (clazz != null && clazz != clazz.getSuperclass()) {
-                    loop:
-                    for (Field field : clazz.getDeclaredFields()) {
-                        boolean log = false;
-                        try {
-                            Class<?> annotationClazz = clazz;
-                            boolean jsonIgnore = false;
-                            boolean serializationIgnore = false;
-                            while (annotationClazz != null && annotationClazz.getSuperclass() != annotationClazz) {
-                                try {
-                                    Field annotationField = annotationClazz.getDeclaredField(field.getName());
-                                    if (annotationField.isAnnotationPresent(JsonIgnore.class)) {
-                                        jsonIgnore = true;
-                                    }
-                                    if (annotationField.isAnnotationPresent(SerializationIgnore.class)) {
-                                        serializationIgnore = true;
-                                    }
-                                }
-                                catch (Exception ignored) {}
-                                annotationClazz = annotationClazz.getSuperclass();
-                            }
-                            if (jsonIgnore) continue;
-                            if (serializationIgnore && !Json.includeSerializationIgnoreFields()) continue;
-                            if (!Json.includeSerializationIgnoreFields() && field.isAnnotationPresent(ManyToOne.class)) {
-                                log = true;
-                                field.setAccessible(true);
-                                gen.writeFieldName(field.getName());
-                                gen.writeStartArray();
-                                Object fieldValue = field.get(value);
-                                if (fieldValue instanceof Repository.Property.List) {
-                                    for (Property<Repository<?>> v : ((Repository.Property.List<Repository<?>>) fieldValue).properties()) {
-                                        // gen.writeStartObject();
-                                        gen.writeString(v.get().getUuid());
-                                        // gen.writeEndObject();
-                                    }
-                                }
-                                gen.writeEndArray();
-                                continue loop;
-                            } else if (!Json.includeSerializationIgnoreFields()) {
-                                try {
-                                    // Get the value of the field from the object
-                                    Object fieldValue = field.get(value);
-
-                                    // Write the field name and its value to the JSON output
-                                    gen.writeFieldName(field.getName());
-                                    // Handle potential null values appropriately
-                                    if (fieldValue == null) {
-                                        gen.writeNull();
-                                    } else {
-                                        // Serialize the field value (uses the default serializer)
-                                        gen.writeObject(fieldValue);
-                                    }
-                                } catch (IllegalAccessException e) {
-                                    e.printStackTrace();
-                                }
-                            }
-                        } catch (Exception ex) {
-                            if (log) ex.printStackTrace();
-                        }
-                    }
-                    clazz = clazz.getSuperclass();
-                }
-
-                // Finish writing the JSON object
-                gen.writeEndObject();
-            }
-            else {
-                gen.writeNull();
-            }
-        }
-    }
-
-    /**
-     * The deserializer for repositories
-     * @param <V>
-     */
-    public class Deserializer<V> extends JsonDeserializer<V> {        
-        @SuppressWarnings("unchecked")
-        @Override
-        public V deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {          
-            JsonNode node = p.getCodec().readTree(p);
-            V instance = null;
-            try {
-                instance = (V)Repository.createRepositoryFromFileName(getClazz(), node.has("uuid") ? node.get("uuid").asText() : null);
-            }
-            catch (Exception ex) {
-                throw new RuntimeException(ex);
-            }
-
-            if (instance == null) return (V)instance;
-
-            // Temporarily change the injectables, store it in a variable
-            Object classInstance = Injects.getInjectableValues().get(getClazz());
-//            if (Json.includeSerializationIgnoreFields()) {
-                Injects.setInjectable((Class<V>)getClazz(), instance);
-//            }
-
-            // Deserialization
-            if (node.isObject()) {
-                Iterator<java.util.Map.Entry<String, JsonNode>> fields = node.fields();
-
-                loop: while (fields.hasNext()) {
-                    java.util.Map.Entry<String, JsonNode> entry = fields.next();
-                    String name = entry.getKey();
-                    JsonNode value = entry.getValue();
-                    Class<?> nodeClazz = getClazz();
-                    Class<?> previousNodeClazz = null;
-                    while (nodeClazz != null && nodeClazz != previousNodeClazz) {
-                        try {
-                            // The declared field on the class
-                            Field field = nodeClazz.getDeclaredField(name);
-                            Json.currentField(field);
-                            boolean jsonIgnore = false;
-                            boolean serializationIgnore = false;
-                            Class<?> annotationClazz = nodeClazz;
-                            while (annotationClazz != null && annotationClazz.getSuperclass() != annotationClazz) {
-                                try {
-                                    Field annotationField = annotationClazz.getDeclaredField(field.getName());
-                                    if (annotationField.isAnnotationPresent(JsonIgnore.class)) {
-                                        jsonIgnore = true;
-                                    }
-                                    if (annotationField.isAnnotationPresent(SerializationIgnore.class)) {
-                                        serializationIgnore = true;
-                                    }
-                                }
-                                catch (Exception ignored) {}
-                                annotationClazz = annotationClazz.getSuperclass();
-                            }
-                            // Ignored
-                            if (jsonIgnore) continue loop;
-                            if (serializationIgnore && !Json.includeSerializationIgnoreFields()) continue loop;
-                            // Null values
-                            if (value.isNull()) {
-                                if (Repository.Property.Map.class.isAssignableFrom(field.getType())) {
-                                    Repository.Property.Map<?, ?> property = (Property.Map<?, ?>) field.get(instance);
-                                    property.clear();
-                                }
-                                else if (Repository.Property.List.class.isAssignableFrom(field.getType())) {
-                                    Repository.Property.List<?> property = (Property.List<?>) field.get(instance);
-                                    property.clear();
-                                }
-                                else if (Repository.Property.class.isAssignableFrom(field.getType())) {
-                                    Repository.Property<?> property = (Property<?>) field.get(instance);
-                                    property.replace(null);
-                                }
-                                else {
-                                    field.set(instance, null);
-                                }
-                                continue loop;
-                            }
-                            if (Json.includeSerializationIgnoreFields()) {
-                                if (Repository.class.isAssignableFrom(field.getType())) {
-                                    Repository<?> repository = createRepositoryFromFileName(field.getType(), null).upload(Json.objectMapper.writeValueAsString(value));
-                                    field.set(instance, repository);
-                                }
-                            }
-                            field.set(instance, Json.objectMapper.readValue(
-                                value.traverse(Json.objectMapper),
-                                field.getType()
-                            ));
-                            break;
-                        }
-                        catch (Exception ex) {
-                            // Field doesnt exist on (sub)type.
-                            previousNodeClazz = nodeClazz;
-                            nodeClazz = getClazz().getSuperclass();
-                        }
-                    }
-                }
-            }
-
-            // Reset injectables
-            if (Json.includeSerializationIgnoreFields() && classInstance != null) {
-                Injects.setInjectable((Class<V>)getClazz(), (V)classInstance);
-            }
-
-            return (V) instance;
         }
     }
 }

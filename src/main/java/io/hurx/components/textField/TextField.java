@@ -42,6 +42,18 @@ public class TextField extends JTextField implements EditableComponent {
     // Flag indicating whether the text field is currently selected.
     private boolean isSelected = false;
 
+    /** GET the custom font */
+    public Font font() {
+        return font;
+    }
+    /** SET a custom font */
+    public TextField font(Font font) {
+        this.font = font;
+        return this;
+    }
+    /** A custom font */
+    private Font font;
+
     public TextField(String text) {
         super(text);
         setFont(Theme.LABEL_FONT);

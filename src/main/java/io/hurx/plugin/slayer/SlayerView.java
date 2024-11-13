@@ -41,26 +41,21 @@ public class SlayerView extends ViewManagement.Entity.View<PluginMaster, PluginR
     public static class Container extends ViewManagement.Entity.Container<PluginMaster, PluginRepository, PluginViews> {
         public Container(PluginMaster master) {
             super(master);
-            master.getRepository().account.profileUuid.listen(new Repository.Property.Listener<String>() {
-                @Override
-                public void onSet(String oldValue, String newValue) {
-                    load(master.getRepository().account.getProfile());
+            load(master.getRepository().account.getProfile());
+            onBeforeRender(() -> {
+                if (getMaster().getRepository().account.getProfile() == null) load(null);
+                else if (getMaster().getRepository().account.getProfile().view.wasDirty()) {
+                    load(getMaster().getRepository().account.getProfile());
                 }
             });
-            load(master.getRepository().account.getProfile());
         }
 
         private void load(ProfileRepository profileRepository) {
             removeAll();
             if (profileRepository == null) return;
-            add(new SlayerMaster(getMaster().getRoot(), new SlayerRepository(profileRepository).initialize()));
-        }
-    }
-
-    // TODO: remove
-    public static class SomeComponent extends ViewManagement.Entity.Component<PluginMaster, PluginRepository, PluginViews> {
-        public SomeComponent(Container container) {
-            super(container, new JLabel("Test slayer"));
+            if (getMaster().getRepository().account == null || getMaster().getRepository().account.getProfile() == null || getMaster().getRepository().account.getProfile().slayer == null) return;
+            getMaster().getRepository().account.getProfile().initialize();
+            add(new SlayerMaster(getMaster().getRoot(), getMaster().getRepository().account.getProfile().slayer));
         }
     }
 }

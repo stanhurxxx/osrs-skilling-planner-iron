@@ -61,6 +61,9 @@ public class TextFieldCellRenderer extends DefaultTableCellRenderer {
      * @return the processed text field
      */
     private TextField processTextField(TextField textField) {
+        if (textField.font() != null) {
+            textField.setFont(textField.font());
+        }
         if (textField.isSelected()) {
             if (textField.isHovered()) {
                 textField.setBackground(Theme.TABLE_BG_COLOR_SELECTED_HOVER);

@@ -15,33 +15,39 @@ import javax.swing.*;
 public class SlayerListView extends ViewManagement.Entity.View<SlayerMaster, SlayerRepository, SlayerViews> {
     @Override
     public boolean isValidated() {
-        // TODO:
-        return true;
+        return container == null || container.master == null || container.master.isValidated();
     }
+
+    /** Ref to the container of slayer list view */
+    private Container container;
     
     public SlayerListView(SlayerMaster master) {
         super(master, SlayerViews.List);
-        add(new Container(master));
+        container = new Container(master);
+        add(container);
     }
 
     /** Container for slayer list view */
     public static class Container extends ViewManagement.Entity.Container<SlayerMaster, SlayerRepository, SlayerViews> {
+        /** The master for the slayer list view */
+        private SlayerListMaster master;
+
         public Container(SlayerMaster master) {
             super(master);
-            master.getRepository().listUuid.listen(new Repository.Property.Listener<String>() {
-                @Override
-                public void onSet(String oldValue, String newValue) {
+            load(getMaster().getRepository().getList());
+            onBeforeRender(() -> {
+                if (getMaster().getRepository().listUuid.wasDirty()) {
                     load(getMaster().getRepository().getList());
                 }
             });
-            load(getMaster().getRepository().getList());
         }
 
+        /** Loads a new slayer list master when the list changes, or initially */
         private void load(SlayerListRepository list) {
             removeAll();
             if (list == null) return;
-            add(new SlayerListMaster(getRoot(), list));
-            getRoot().render();
+            master = new SlayerListMaster(getRoot(), list);
+            add(master);
         }
     }
 }

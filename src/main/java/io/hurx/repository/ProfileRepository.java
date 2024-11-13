@@ -1,23 +1,16 @@
 package io.hurx.repository;
 
-import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 
-import io.hurx.annotations.SerializationIgnore;
+import io.hurx.annotations.OneToOne;
 import io.hurx.models.Skills;
 import io.hurx.models.items.Items;
 import io.hurx.models.repository.Repository;
-import io.hurx.models.repository.exceptions.PlayerNotLoggedInException;
-import io.hurx.models.repository.exceptions.RepositoryFileCorruptedException;
-import io.hurx.plugin.Plugin;
 import io.hurx.plugin.PluginViews;
 import io.hurx.repository.slayer.SlayerRepository;
 import io.hurx.utils.Injects;
-import io.hurx.utils.Json;
 
 /**
  * The PluginRepository class serves as the data repository for the Ironman Skilling Planner plugin.
@@ -67,7 +60,7 @@ public class ProfileRepository extends Repository<PluginRepository> {
     /** 
      * An instance of SlayerRepository, which manages slayer-specific data.
      */
-    @SerializationIgnore
+    @OneToOne
     public SlayerRepository slayer = new SlayerRepository(this);
 
     /**
@@ -77,6 +70,7 @@ public class ProfileRepository extends Repository<PluginRepository> {
     public ProfileRepository(@JacksonInject PluginRepository pluginRepository) {
         super(pluginRepository, UUID.randomUUID().toString());
         Injects.setInjectable(ProfileRepository.class, this);
+        slayer = (SlayerRepository) Repository.registered.get(slayer.generatePath());
     }
 
     /**
@@ -89,20 +83,6 @@ public class ProfileRepository extends Repository<PluginRepository> {
     public ProfileRepository(@JacksonInject PluginRepository pluginRepository, String uuid) {
         super(pluginRepository, uuid);
         Injects.setInjectable(ProfileRepository.class, this);
-    }
-
-    @Override
-    public ProfileRepository initialize() {
-        try {
-            ProfileRepository loaded = (ProfileRepository) super.load();
-            if (loaded == this) {
-                throw new Exception();
-            }
-            loaded.slayer = loaded.slayer.initialize();
-            return loaded;
-        } catch (Exception ex) {
-            slayer = slayer.initialize();
-            return this;
-        }
+        slayer = (SlayerRepository) Repository.registered.get(slayer.generatePath());
     }
 }
