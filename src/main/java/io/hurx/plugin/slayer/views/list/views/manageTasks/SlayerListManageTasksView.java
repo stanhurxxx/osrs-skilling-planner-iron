@@ -323,6 +323,8 @@ public class SlayerListManageTasksView extends ViewManagement.Entity.View<Slayer
                                 SlayerBracelets bracelet = getMaster().getRepository().bracelets.get(tableCell.assignment.getMonster());
                                 boolean isSlaughtered = bracelet == SlayerBracelets.Slaughter;
                                 boolean isExpeditious = bracelet == SlayerBracelets.Expeditious;
+                                boolean isExtendable = tableCell.assignment.getMinExtended() != null;
+                                boolean isExtended = getMaster().getRepository().extendedMonsters.containsKey(tableCell.assignment.getMonster());
                                 JMenuItem blockItem = new JMenuItem(isBlocked ? "Do" : "Block");
                                 blockItem.addActionListener(new ActionListener() {
                                     @Override
@@ -362,6 +364,22 @@ public class SlayerListManageTasksView extends ViewManagement.Entity.View<Slayer
                                 else {
                                     menu.add(skipItem);
                                     menu.add(blockItem);
+                                }
+                                if (isExtendable) {
+                                    JMenuItem extendItem = new JMenuItem(isExtended ? "Un-extend" : "Extend");
+                                    extendItem.addActionListener(new ActionListener() {
+                                        @Override
+                                        public void actionPerformed(ActionEvent e) {
+                                            if (isExtended) {
+                                                getMaster().getRepository().extendedMonsters.remove(tableCell.assignment.getMonster());
+                                            }
+                                            else {
+                                                getMaster().getRepository().extendedMonsters.set(tableCell.assignment.getMonster(), true);
+                                            }
+                                            getRoot().render();
+                                        }
+                                    });
+                                    menu.add(extendItem);
                                 }
                                 JMenuItem slaughterItem = new JMenuItem(isSlaughtered ? "Use expeditious bracelets" : "Use slaughter bracelets");
                                 slaughterItem.addActionListener(new ActionListener() {

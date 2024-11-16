@@ -1,6 +1,7 @@
 package io.hurx.models.slayer.monsters;
 
 import io.hurx.models.IconPaths;
+import io.hurx.models.Skills;
 import io.hurx.models.items.Items;
 import io.hurx.models.items.LootItem;
 
@@ -76,6 +77,7 @@ public enum Monsters {
     AbyssalDemonsSlayerTower("Abyssal demons (Slayer Tower)", IconPaths.LocationSlayerTower, MonsterStats.Builder
         .hitpoints(150)
         .slayerTower(true)
+        .isDemon(true)
 
         .loot(LootItem.builder(Items.AbyssalAshes, 1, 1).dropRate(1f).build())
         .loot(LootItem.builder(Items.RuneChainbody, 1, 1).dropRate(128f).build())
@@ -99,6 +101,7 @@ public enum Monsters {
     ),
     AbyssalDemonsCatacombs("Abyssal demons (Catacombs)", IconPaths.LocationKourendCatacombs, Monsters.AbyssalDemonsSlayerTower.getStats()
         .clone()
+        .isBarrage(true)
 
         .loot(LootItem.builder(Items.AncientShard, 1, 1).dropRate(233f).build())
         .loot(LootItem.builder(Items.DarkTotemBase, 1, 1).dropRate(350f).build())
@@ -108,8 +111,11 @@ public enum Monsters {
         .build()
     ),
     AbyssalDemonsWilderness("Abyssal demons (Wilderness)", IconPaths.LocationWilderness, AbyssalDemonsSlayerTower.getStats().clone()
+        .isBarrage(true)
+        .isWilderness(true)
         .build()
     ),
+    // TODO: rates
     AbyssalDemonsSire("Abyssal sire", IconPaths.MonsterAbyssalSire, MonsterStats.Builder
         .hitpoints(400)
         .xpBoostPercentage(12.5f)
@@ -215,14 +221,18 @@ public enum Monsters {
     ),
     AnkousCatacombs("Ankous (Catacombs)", IconPaths.LocationKourendCatacombs, AnkousNieve.getStats()
         .clone(60)
+        .isBarrage(true)
         .build()
     ),
     AnkousWilderness("Ankous (Wilderness)", IconPaths.LocationWilderness, AnkousNieve.getStats()
         .clone(100)
+        .isBarrage(true)
+        .isWilderness(true)
         .build()
     ),
     AraxytesLevel96("Araxytes (level 96)", IconPaths.MonsterAraxyteLevel96, MonsterStats.Builder
         .hitpoints(60)
+        .isBarrage(true)
 
         .loot(LootItem.builder(Items.RuneMedHelm, 1, 1).dropRate(63.5f).build())
         .loot(LootItem.builder(Items.RunePlatelegs, 1, 1).dropRate(63.5f).build())
@@ -255,6 +265,7 @@ public enum Monsters {
     ),
     AraxytesLevel146("Araxytes (level 146)", IconPaths.MonsterAraxyteLevel146, MonsterStats.Builder
         .hitpoints(100)
+        .isBarrage(true)
 
         .loot(LootItem.builder(Items.RuneMedHelm, 2, 1).dropRate(63.5f).build())
         .loot(LootItem.builder(Items.RunePlatelegs, 2, 1).dropRate(63.5f).build())
@@ -285,6 +296,7 @@ public enum Monsters {
 
         .build()
     ),
+    // TODO:
     Araxxor("Araxxor", IconPaths.MonsterAraxxor, MonsterStats.Builder
         .hitpoints(1020)
         .xpBoostPercentage(67.5f)
@@ -314,6 +326,7 @@ public enum Monsters {
 
         .build()
     ),
+    // TODO:
     Aviansie("Aviansie", IconPaths.MonsterAviansie, MonsterStats.Builder
         .hitpoints(new int[] {
             70,
@@ -347,6 +360,7 @@ public enum Monsters {
 
         .build()
     ),
+    // TODO:
     AviansieWilderness("Aviansie (wilderness)", IconPaths.LocationWilderness, Aviansie.getStats()
         .clone(new int[] {
             70,
@@ -360,6 +374,7 @@ public enum Monsters {
         })
         .build()
     ),
+    // TODO:
     KreeArra("Kree'arra", IconPaths.MonsterKreeArra, MonsterStats.Builder
         .hitpoints(255)
         .taskDecrementPerKill(4)
@@ -420,6 +435,7 @@ public enum Monsters {
     ),
     BlackDemonTaverley("Black Demon (Taverley Dungeon)", IconPaths.MonsterBlackDemon, MonsterStats.Builder
         .hitpoints(157)
+        .isDemon(true)
 
         .loot(LootItem.builder(Items.GrimyHarralander, 1).dropRate(50.9f).build())
         .loot(LootItem.builder(Items.GrimyRanarrWeed, 1).dropRate(64.8f).build())
@@ -448,8 +464,10 @@ public enum Monsters {
     ),
     BlackDemonWilderness("Black Demon (Wilderness)", IconPaths.LocationWilderness, BlackDemonTaverley.getStats()
         .clone()
+        .isWilderness(true)
         .build()
     ),
+    // TODO:
     DemonicGorillas("Demonic Gorilla", IconPaths.MonsterDemonicGorilla, MonsterStats.Builder
         .hitpoints(380)
         .xpBoostPercentage(7.5f)
@@ -484,9 +502,11 @@ public enum Monsters {
 
         .build()
     ),
+    // TODO:
     Skotizo("Skotizo", IconPaths.MonsterSkotizo, MonsterStats.Builder
         .hitpoints(450)
         .xpBoostPercentage(37.5f)
+        .isDemon(true)
 
         .loot(LootItem.builder(Items.InfernalAshes, 1).dropRate(1f).build()) // "Always" interpreted as 1 drop per kill
         .loot(LootItem.builder(Items.ClueScrollHard, 1).dropRate(1f).build()) // "Always" interpreted as 1 drop per kill
@@ -552,8 +572,10 @@ public enum Monsters {
     ),
     BlackDragonsWilderness("Black Dragons (wilderness)", IconPaths.LocationWilderness, BlackDragons.getStats()
         .clone(250)
+        .isWilderness(true)
         .build()
     ),
+    // TODO:
     BrutalBlackDragons("Brutal Black Dragons", IconPaths.LocationKourendCatacombs, MonsterStats.Builder
         .hitpoints(315)
         .xpBoostPercentage(5f)
@@ -590,6 +612,7 @@ public enum Monsters {
 
         .build()
     ),
+    // TODO:
     KingBlackDragons("King Black Dragons", IconPaths.MonsterKingBlackDragons, MonsterStats.Builder
         .hitpoints(240)
         .xpBoostPercentage(7.5f)
@@ -611,6 +634,7 @@ public enum Monsters {
     BloodveldsSlayerTower("Bloodvelds (Slayer tower)", IconPaths.LocationSlayerTower, MonsterStats.Builder
         .hitpoints(120)
         .slayerTower(true)
+        .isDemon(true)
 
         .loot(LootItem.builder(Items.VileAshes, 1).dropRate(1F).build()) // Vile ashes, Always drop
         .loot(LootItem.builder(Items.RuneMedHelm, 1).dropRate(128F).build()) // Rune med helm, 1/128 rarity
@@ -635,6 +659,8 @@ public enum Monsters {
     ),
     BloodveldsCatacombs("Mutated Bloodvelds (Catacombs)", IconPaths.LocationKourendCatacombs, MonsterStats.Builder
         .hitpoints(170)
+        .isBarrage(true)
+        .isDemon(true)
 
         .loot(LootItem.builder(Items.RuneMedHelm, 1).dropRate(64F).build()) // Rune med helm, 2/128 rarity
         .loot(LootItem.builder(Items.RuneBattleaxe, 1).dropRate(128F).build()) // Rune battleaxe, 1/128 rarity
@@ -651,8 +677,11 @@ public enum Monsters {
     ),
     BloodveldsWilderness("Bloodvelds (Wilderness)", IconPaths.LocationWilderness, BloodveldsSlayerTower.getStats()
         .clone(134)
+        .isBarrage(true)
+        .isWilderness(true)
         .build()
     ),
+    // TODO:
     Vorkath("Vorkath", IconPaths.MonsterVorkath, MonsterStats.Builder
         .hitpoints(750)
 
@@ -730,6 +759,7 @@ public enum Monsters {
 
         .build()
     ),
+    // TODO:
     BrutalBlueDragon("Brutal Blue Dragons", IconPaths.LocationKourendCatacombs, MonsterStats.Builder
         .hitpoints(245)
         .xpBoostPercentage(5f)
@@ -786,6 +816,7 @@ public enum Monsters {
 
         .build()
     ),
+    // TODO:
     CaveKraken("Cave Kraken", IconPaths.MonsterCaveKraken, MonsterStats.Builder
         .hitpoints(125)
 
@@ -820,6 +851,7 @@ public enum Monsters {
 
         .build()
     ),
+    // TODO:
     Kraken("Kraken", IconPaths.MonsterKraken, MonsterStats.Builder
         .hitpoints(255)
 
@@ -847,6 +879,7 @@ public enum Monsters {
     ),
     DagannothCatacombs("Dagannoths (catacombs)", IconPaths.LocationKourendCatacombs, Dagannoth.getStats()
         .clone()
+        .isBarrage(true)
 
         .loot(LootItem.builder(Items.AncientShard, 1, 1).dropRate(286f).build())
         .loot(LootItem.builder(Items.DarkTotemBase, 1, 1).dropRate(430f).build())
@@ -855,6 +888,7 @@ public enum Monsters {
 
         .build()
     ),
+    // TODO:
     DagannothKings("Dagannoth Kings", IconPaths.MonsterDagannothKings, MonsterStats.Builder
         .hitpoints(255 + 255 + 255)
         .xpBoostPercentage(30f)
@@ -1031,6 +1065,7 @@ public enum Monsters {
     ),
     DustDevilsCatacombs("Dust Devils (Catacombs)", IconPaths.LocationKourendCatacombs, DustDevils.getStats()
         .clone(130)
+        .isBarrage(true)
 
         .loot(LootItem.builder(Items.AncientShard, 1, 1).dropRate(246f).build())
         .loot(LootItem.builder(Items.DarkTotemBase, 1, 1).dropRate(370f).build())
@@ -1041,6 +1076,8 @@ public enum Monsters {
     ),
     DustDevilsWilderness("Dust Devils (Wilderness)", IconPaths.LocationWilderness, DustDevils.getStats()
         .clone()
+        .isBarrage(true)
+        .isWilderness(true)
         .build()
     ),
     ElvesIorwerthWarrior("Iorwerth Warriors", IconPaths.MonsterElfIorwerth, MonsterStats.Builder
@@ -1128,6 +1165,7 @@ public enum Monsters {
 
         .build()
     ),
+    // TODO:
     SpittingWyvern("Spitting Wyvern", IconPaths.MonsterSpittingWyvern, MonsterStats.Builder
         .hitpoints(200)
         .xpBoostPercentage(2.5f)
@@ -1155,6 +1193,7 @@ public enum Monsters {
 
         .build()
     ),
+    // TODO:
     TalonedWyvern("Taloned Wyvern", IconPaths.MonsterTalonedWyvern, MonsterStats.Builder
         .hitpoints(200)
         .xpBoostPercentage(2.5f)
@@ -1185,6 +1224,7 @@ public enum Monsters {
 
         .build()
     ),
+    // TODO:
     LongTailedWyvern("Long-tailed Wyvern", IconPaths.MonsterLongTailedWyvern, MonsterStats.Builder
         .hitpoints(200)
         .xpBoostPercentage(2.5f)
@@ -1212,6 +1252,7 @@ public enum Monsters {
 
         .build()
     ),
+    // TODO:
     AncientWyvern("Ancient Wyvern", IconPaths.MonsterAncientWyvern, MonsterStats.Builder
         .hitpoints(300)
         .xpBoostPercentage(5f)
@@ -1290,6 +1331,7 @@ public enum Monsters {
     ),
     GreaterDemons("Greater demons", IconPaths.MonsterGreaterDemon, MonsterStats.Builder
         .hitpoints(87)
+        .isDemon(true)
 
         .loot(LootItem.builder(Items.VileAshes, 1, 1).dropRate(1.0f).build()) // 1 / 1.0
         .loot(LootItem.builder(Items.RuneFullHelm, 1, 1).dropRate(128.0f).build()) // 1 / 0.0078125
@@ -1313,6 +1355,7 @@ public enum Monsters {
         .clone()
         .build()
     ),
+    // TODO:
     TormentedDemon("Tormented demons", IconPaths.MonsterTormentedDemon, MonsterStats.Builder
         .hitpoints(600)
         .xpBoostPercentage(77.5f)
@@ -1347,6 +1390,7 @@ public enum Monsters {
 
         .build()
     ),
+    // TODO:
     Kril("K'ril Tsutsaroth", IconPaths.MonsterKril, MonsterStats.Builder
         .hitpoints(255)
         .taskDecrementPerKill(2)
@@ -1363,6 +1407,7 @@ public enum Monsters {
     ),
     Hellhounds("Hellhounds (Nieve's Cave)", IconPaths.LocationNievesCave, MonsterStats.Builder
         .hitpoints(116)
+        .isDemon(true)
 
         .loot(LootItem.builder(Items.VileAshes, 1, 1).dropRate(1.0f).build()) // Always
         .loot(LootItem.builder(Items.SmoulderingStone, 1, 1).dropRate(32768.0f).build()) // 1/32768
@@ -1386,6 +1431,7 @@ public enum Monsters {
         .clone(150)
         .build()
     ),
+    // TODO:
     Cerberus("Cerberus", IconPaths.MonsterCerberus, MonsterStats.Builder
         .hitpoints(600)
         .xpBoostPercentage(15f)
@@ -1417,6 +1463,7 @@ public enum Monsters {
 
         .build()
     ),
+    // TODO:
     IronDragons("Iron Dragons", IconPaths.MonsterIronDragon, MonsterStats.Builder
         .hitpoints(165)
         .xpBoostPercentage(2.5f)
@@ -1433,6 +1480,7 @@ public enum Monsters {
 
         .build()
     ),
+    // TODO:
     IronDragonsCatacombs("Iron Dragons", IconPaths.LocationKourendCatacombs, IronDragons.getStats()
         .clone(195)
         .xpBoostPercentage(2.5f)
@@ -1493,6 +1541,7 @@ public enum Monsters {
 
         .build()
     ),
+    // TODO:
     KalphiteQueens("Kalphite Queens", IconPaths.MonsterKalphiteQueen, MonsterStats.Builder
         .hitpoints(255 + 255)
         .xpBoostPercentage(5f)
@@ -1622,6 +1671,7 @@ public enum Monsters {
 
         .build()
     ),
+    // TODO:
     MithrilDragons("Mithril Dragons", IconPaths.MonsterMithrilDragon, MonsterStats.Builder
         .hitpoints(254)
         .xpBoostPercentage(7.5f)
@@ -1641,10 +1691,12 @@ public enum Monsters {
 
         .build()
     ),
+    // TODO:
     MutatedZygomites("Mutated Zygomites", IconPaths.MonsterMutatedZygomite, MonsterStats.Builder
         .hitpoints(65)
         .build()
     ),
+    // TODO:
     AncientZygomites("Ancient Zygomites", IconPaths.MonsterAncientZygomite, MonsterStats.Builder
         .hitpoints(150)
         .xpBoostPercentage(2.5f)
@@ -1663,6 +1715,7 @@ public enum Monsters {
     ),
     NechryaelsSlayerTower("Nechryaels (Slayer Tower)", IconPaths.LocationSlayerTower, MonsterStats.Builder
         .hitpoints(105)
+        .isDemon(true)
 
         .loot(LootItem.builder(Items.MaliciousAshes, 1, 1).dropRate(1f).build())
         .loot(LootItem.builder(Items.Rune2HSword, 1, 1).dropRate(29f).build())
@@ -1683,6 +1736,9 @@ public enum Monsters {
     NechryaelsCatacombs("Greater Nechryaels (Catacombs)", IconPaths.LocationKourendCatacombs, MonsterStats.Builder
         .hitpoints(205)
         .xpBoostPercentage(2.5f)
+        .isDemon(true)
+        .isBarrage(true)
+        // TODO: barrage 6/9 for slay xp
 
         .loot(LootItem.builder(Items.RuneMedHelm, 1, 1).dropRate(32f).build())
         .loot(LootItem.builder(Items.RuneFullHelm, 1, 1).dropRate(42.67f).build())
@@ -1717,6 +1773,10 @@ public enum Monsters {
     NechryaelsWilderness("Greater Nechryaels (Wilderness)", IconPaths.LocationWilderness, MonsterStats.Builder
         .hitpoints(205)
         .xpBoostPercentage(2.5f)
+        .isDemon(true)
+        .isWilderness(true)
+        .isBarrage(true)
+        // TODO: barrage 6/9 for slay xp
 
         .loot(LootItem.builder(Items.RuneMedHelm, 1, 1).dropRate(28f).build())
         .loot(LootItem.builder(Items.RuneFullHelm, 1, 1).dropRate(37.33f).build())
@@ -1779,6 +1839,7 @@ public enum Monsters {
 
         .build()
     ),
+    // TODO:
     BrutalRedDragons("Brutal Red Dragons", IconPaths.LocationKourendCatacombs, MonsterStats.Builder
         .hitpoints(285)
         .xpBoostPercentage(5f)
@@ -1804,6 +1865,7 @@ public enum Monsters {
 
         .build()
     ),
+    // TODO:
     RuneDragons("Rune Dragons", IconPaths.MonsterRuneDragon, MonsterStats.Builder
         .hitpoints(330)
         .xpBoostPercentage(10)
@@ -1887,6 +1949,7 @@ public enum Monsters {
 
         .build()
     ),
+    // TODO:
     SkeletalWyverns("Skeletal Wyverns", IconPaths.MonsterSkeletalWyverns, MonsterStats.Builder
         .hitpoints(200)
         .xpBoostPercentage(5)
@@ -1921,6 +1984,7 @@ public enum Monsters {
     ),
     SmokeDevils("Smoke Devils", IconPaths.MonsterSmokeDevils, MonsterStats.Builder
         .hitpoints(185)
+        .isBarrage(true)
 
         .loot(LootItem.builder(Items.AirBattlestaff, 1, 1).dropRate(42.67f).build())
         .loot(LootItem.builder(Items.FireBattlestaff, 1, 1).dropRate(42.67f).build())
@@ -1941,6 +2005,7 @@ public enum Monsters {
 
         .build()
     ),
+    // TODO:
     Thermy("Thermonuclear Smoke Devils", IconPaths.MonsterThermonuclearSmokeDevils, MonsterStats.Builder
         .hitpoints(240)
 
@@ -1988,6 +2053,7 @@ public enum Monsters {
 
         .build()
     ),
+    // TOOD:
     SteelDragons("Steel Dragons", IconPaths.MonsterSteelDragons, MonsterStats.Builder
         .hitpoints(210)
 
@@ -2002,6 +2068,7 @@ public enum Monsters {
 
         .build()
     ),
+    // TODO:
     SteelDragonsCatacombs("Steel Dragons (Catacombs)", IconPaths.LocationKourendCatacombs, SteelDragons.getStats()
         .clone(250)
 
@@ -2105,6 +2172,7 @@ public enum Monsters {
     ),
     TzHaars("TzHaars", IconPaths.MonsterTzHaars, MonsterStats.Builder
         .hitpoints(new int[] { 80, 100, 120, 140 })
+        .isBarrage(true)
         .build()
     ),
     Jad("TzTok-Jad", IconPaths.MonsterJads, MonsterStats.Builder

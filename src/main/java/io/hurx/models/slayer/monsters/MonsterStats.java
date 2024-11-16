@@ -1,8 +1,11 @@
 package io.hurx.models.slayer.monsters;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Map;
 
+import io.hurx.models.CombatStyle;
 import io.hurx.models.items.LootItem;
 
 /**
@@ -19,6 +22,9 @@ public class MonsterStats {
     /** The loot items dropped by the monster. */
     private List<LootItem> lootItems = new ArrayList<>();
 
+    /** The xp rates for the monster **/
+    private Map<CombatStyle, Integer> xpRates = new HashMap<>();
+
     /** Indicates if the monster is in the Slayer Tower. */
     private boolean slayerTower = false;
 
@@ -30,6 +36,15 @@ public class MonsterStats {
      * for each kill of this monster during a Slayer task.
      */
     private int taskDecrementPerKill = 1;
+
+    /** Whether or not the monster is a demon */
+    private boolean isDemon = false;
+
+    /** Is the task in the wildy? */
+    private boolean isWilderness = false;
+
+    /** Is the task barrage? */
+    private boolean isBarrage = false;
 
     /** The total Slayer experience gained from defeating this monster. */
     private Integer slayer;
@@ -116,6 +131,8 @@ public class MonsterStats {
         MonsterStats stats = Builder.hitpoints(hitpoints).stats;
         List<LootItem> items = new ArrayList<>(lootItems);
         stats.lootItems = items;
+        stats.xpRates = xpRates;
+        stats.isDemon = isDemon;
         return new Builder(stats);
     }
 
@@ -129,6 +146,7 @@ public class MonsterStats {
         MonsterStats stats = new MonsterStats(hitpoints == null ? this.hitpoints : hitpoints);
         List<LootItem> items = new ArrayList<>(lootItems);
         stats.lootItems = items;
+        stats.xpRates = xpRates;
         return new Builder(stats);
     }
 
@@ -177,6 +195,24 @@ public class MonsterStats {
          */
         public Builder loot(LootItem lootItem) {
             stats.lootItems.add(lootItem);
+            return this;
+        }
+
+        /** Is a demon */
+        public Builder isDemon(boolean isDemon) {
+            stats.isDemon = isDemon;
+            return this;
+        }
+
+        /** Is in wilderness */
+        public Builder isWilderness(boolean isWilderness) {
+            stats.isWilderness = isWilderness;
+            return this;
+        }
+
+        /** Is barrage task */
+        public Builder isBarrage(boolean isBarrage) {
+            stats.isBarrage = isBarrage;
             return this;
         }
 
